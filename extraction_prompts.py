@@ -820,42 +820,12 @@ HOUSING SEAL: [radial seal/interface seal/none]
 """
 
 WIRE_SEAL_PROMPT = """
-### Task
-Read the passage and decide how the wire-cavity interface is sealed.
+Determine the Wire Seal type:
 
-### Canonical labels (return **one** of these, exactly as written)
-single   injected   mat   none
+    Wire seal describes the sealing of the space between wire and cavity wall, when a terminal is fitted in a cavity. There are different possibilities for sealing available: Single wire seal, Injected, Mat seal (includes “gel family seal” and “silicone family seal”), None.
 
-### Synonyms (never output these; just map them)
-single    → single
-single-wire seal, 1-wire seal, individual seal, SWS  → single
-
-injected  → injected
-injected seal, potted, resin-filled                → injected
-
-mat       → mat
-mat seal, gel family seal, silicone family seal,
-gel seal, silicone seal, family seal              → mat
-
-none      → none
-unsealed, no seal, open cavity, dry cavity        → none
-
-### Output format
-WIRE_SEAL: <single|injected|mat|none>
-
-### Examples
-1. “Each cavity is sealed with a single wire seal.”  
-   → WIRE_SEAL: single
-
-2. “Connector features a one-piece mat seal for all positions.”  
-   → WIRE_SEAL: mat
-
-3. “This is an unsealed connector; no wire seals are used.”  
-   → WIRE_SEAL: none
-
-4. “Uses a silicone family seal for wire entry.”  
-   Reasoning: “silicone family seal” is a synonym of mat.  
-   → WIRE_SEAL: mat
+    Output format:
+    WIRE SEAL: [Single Wire Seal/Injected/Mat Seal/None]
 
 """
 
