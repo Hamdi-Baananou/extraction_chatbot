@@ -471,10 +471,10 @@ Output:
 """
     prompt = PromptTemplate.from_template(template)
 
-    # Chain uses retriever to get PDF context
+    # Chain uses retriever to get PDF context based on extraction instructions
     pdf_chain = (
         RunnableParallel(
-            context=RunnablePassthrough() | (lambda x: retrieve_and_log_chunks(retriever, f"Extract information about {x['attribute_key']} for part number {x.get('part_number', 'N/A')}", x['attribute_key'])) | format_docs,
+            context=RunnablePassthrough() | (lambda x: retrieve_and_log_chunks(retriever, x['extraction_instructions']['extraction_instructions'], x['attribute_key']['attribute_key'])) | format_docs,
             extraction_instructions=RunnablePassthrough(),
             attribute_key=RunnablePassthrough(),
             part_number=RunnablePassthrough()
