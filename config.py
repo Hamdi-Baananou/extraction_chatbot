@@ -38,8 +38,8 @@ is_persistent = bool(CHROMA_PERSIST_DIRECTORY) # True if directory is set, False
 # CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 200))  # Restored
 
 # --- Retriever Configuration ---
-RETRIEVER_K = int(os.getenv("RETRIEVER_K", 10)) # Renamed from RETRIEVER_SEARCH_K
-VECTOR_SIMILARITY_THRESHOLD = float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", 0.4)) # Add similarity threshold
+RETRIEVER_K = int(os.getenv("RETRIEVER_K", 8)) # Renamed from RETRIEVER_SEARCH_K
+VECTOR_SIMILARITY_THRESHOLD = float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", 0.5)) # Add similarity threshold
 
 # --- LLM Request Configuration ---
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0.0)) # Adjusted default
