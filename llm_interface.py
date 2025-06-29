@@ -474,15 +474,10 @@ Output:
     # Chain uses retriever to get PDF context based on extraction instructions
     pdf_chain = (
         RunnableParallel(
-            context=RunnablePassthrough() | (lambda x: retrieve_and_log_chunks(retriever, x['extraction_instructions']['extraction_instructions'], x['attribute_key']['attribute_key'])) | format_docs,
-            extraction_instructions=RunnablePassthrough(),
-            attribute_key=RunnablePassthrough(),
-            part_number=RunnablePassthrough()
-        )
-        .assign(
-            extraction_instructions=lambda x: x['extraction_instructions']['extraction_instructions'],
-            attribute_key=lambda x: x['attribute_key']['attribute_key'],
-            part_number=lambda x: x['part_number'].get('part_number', "Not Provided")
+            context=lambda x: retrieve_and_log_chunks(retriever, x['extraction_instructions'], x['attribute_key']) | format_docs,
+            extraction_instructions=lambda x: x['extraction_instructions'],
+            attribute_key=lambda x: x['attribute_key'],
+            part_number=lambda x: x.get('part_number', "Not Provided")
         )
         | prompt
         | llm
@@ -528,17 +523,12 @@ Output:
 """
     prompt = PromptTemplate.from_template(template)
 
-    # Chain structure similar to PDF chain to handle inputs
+    # Chain structure simplified to handle inputs directly
     web_chain = (
         RunnableParallel(
-            cleaned_web_data=RunnablePassthrough(),
-            extraction_instructions=RunnablePassthrough(),
-            attribute_key=RunnablePassthrough()
-        )
-        .assign(
-            cleaned_web_data=lambda x: x['cleaned_web_data']['cleaned_web_data'], # Nested dict access
-            extraction_instructions=lambda x: x['extraction_instructions']['extraction_instructions'],
-            attribute_key=lambda x: x['attribute_key']['attribute_key']
+            cleaned_web_data=lambda x: x['cleaned_web_data'],
+            extraction_instructions=lambda x: x['extraction_instructions'],
+            attribute_key=lambda x: x['attribute_key']
         )
         | prompt
         | llm
