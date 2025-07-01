@@ -508,76 +508,44 @@ Determine the number of rows by identifying explicit mentions or inferring from 
 """
 
 MECHANICAL_CODING_PROMPT = """
-Determine mechanical coding using this reasoning chain:
+Determine the Mechanical Coding of the given part based strictly on the content of the provided engineering document.
 
-    STEP 1: CODING IDENTIFICATION
-    - Scan for:
-      ✓ Explicit labels: \"Coding A/B/C/D/Z\" (case-sensitive)
-      ✓ Diagram markers: Keyed slots/pins without labels
-      ✓ Universal coding indicators: \"neutral coding\", \"0-position\"
-      ✓ Explicit negatives: \"no mechanical coding\"
+Mechanical coding refers to the physical or labeled keying system used to prevent incorrect mating of connectors. This can be explicitly named (e.g., Coding A/B/C...), inferred from drawings, or described through universal compatibility.
 
-    STEP 2: DOCUMENT ANALYSIS
-    - For visual-only coding:
-      ✓ Check drawing annotations
-      ✓ Verify text references:
-        → Labeled? Use letter code
-        → Unlabeled? → \"no naming\"
-    - For family connectors:
-      ✓ Cross-reference related parts
-      ✓ Confirm universal compatibility
+Follow these steps to determine the correct Mechanical Coding:
 
-    STEP 3: CODING TYPE RESOLUTION
-    1. Explicitly named (A/B/C/D):
-       - Verify case match (A≠a)
-    2. Universal connector (Z):
-       - Requires ALL:
-         * Family-wide compatibility
-         * Neutral/0-position designation
-    3. No coding:
-       - Explicit \"none\" statement
-       - Absence of physical coding features
-    4. Ambiguous:
-       - Unlabeled diagram features → \"no naming\"
+STEP 1: IDENTIFY ALL CODING INDICATIONS
+- Search for:
+  ✓ Explicit coding letters: "Coding A", "Coding B", etc. (case-sensitive)
+  ✓ Statements like "neutral coding", "0-position", "universal coding"
+  ✓ Phrases like "no mechanical coding", "not keyed", "not polarized"
+  ✓ Drawings with visible keyways, slots, or pins (with or without labels)
 
-    STEP 4: CONFLICT RESOLUTION
-    - Multiple codings:
-      ✓ Apply document hierarchy:
-        1. Latest revision date
-        2. Engineering drawings > Spec sheets
-        3. Part numbers with revision suffixes
-      ✓ Reject unversioned conflicts
+STEP 2: RESOLVE CODING TYPE
+- If a **letter code** (e.g., A/B/C/D) is clearly stated, extract it directly.
+- If labeled as **universal** or "neutral coding" AND no specific keying is mentioned:
+  → Assign: Z
+- If drawings show **keying features without a name** (no label, no text):
+  → Assign: no naming
+- If the document **explicitly says no keying**, or the part lacks physical keying features:
+  → Assign: none
+- If nothing is found in the document:
+  → Assign: 9999
 
-    STEP 5: VALIDATION CHECK
-    - Final requirements:
-      1. Case-sensitive exact match
-      2. Contextual alignment (mating pair)
-      3. Physical feature verification
-      4. Single definitive answer
+STEP 3: HANDLE MULTIPLE CODINGS
+- If multiple codings are shown (e.g., for several part variants), return only the one that applies to the specific part in question.
+- If unclear which coding applies, but keying is present:
+  → Assign: no naming
 
-    **Examples:**
-    - **"This part has no mechanical keying features."**
-      → REASONING: [Step3] Explicit negative → [Step5] Confirmed
-      → MECHANICAL CODING: **None**
-    - **\"Positioning: Coding C (DWG-123 Rev.2)\"**
-      → REASONING: [Step1] Explicit → [Step3] Valid case → [Step5] Confirmed
-      → MECHANICAL CODING: **C**
-    - **"This variant is mechanically coded with keying 'V'."**
-      → REASONING: [Step1] Explicit 'V' → [Step3] Valid named code → [Step5] Confirmed
-      → MECHANICAL CODING: **V**
-    - **\"Universal connector for all variants\"**
-      → REASONING: [Step3] Family-wide → Z
-      → MECHANICAL CODING: **Z**
-    - **"The connector has a neutral keying for universal mating."**
-      → REASONING: [Step1] "neutral" indicator → [Step3] Universal → [Step5] Confirmed
-      → MECHANICAL CODING: **Neutral**
-    - **\"Keyed slots shown in Fig.5 (unlabeled)\"**
-      → REASONING: [Step2] Visual-only → [Step3] Ambiguous → \"no naming\"
-      → MECHANICAL CODING: **no naming**
+STEP 4: ENFORCE STRICT OUTPUT
+- Do NOT guess or infer from part families, unless the document explicitly states it.
+- Avoid hallucinating codes not mentioned in the document.
+- Match exactly (e.g., "Coding A" is valid, but "coding a" is not).
 
-    **Output format:**
-    MECHANICAL CODING: [A/B/C/D/Z/no naming/none]
+Final Output must use this format:
+MECHANICAL CODING: [A/B/C/D/Z/no naming/none/9999]
 """
+
 
 COLOUR_PROMPT = """
 Determine connector color using this reasoning chain:
