@@ -820,18 +820,26 @@ HOUSING SEAL: [radial seal/interface seal/none]
 """
 
 WIRE_SEAL_PROMPT = """
-Determine the Wire Seal type from the given engineering document:
+Determine the Wire Seal type from the given engineering document.
 
-Wire seal refers explicitly to sealing between the wire and cavity wall when a terminal is fitted. Identify the type based on the "APPLICABLE TERMINALS AND WIRE SEALS" table or related notes in the document.
+A wire seal prevents moisture and contaminants from entering the connector by sealing the gap between the wire and cavity wall when a terminal is inserted. Use clues from tables (e.g. “APPLICABLE TERMINALS AND SEALS”), drawings, or specification notes to determine the type.
 
-Possible sealing types:
-- Single Wire Seal: Mentioned explicitly as "Single Wire Seal" or individually specified seal.
-- Injected: Explicitly stated as injected sealing.
-- Mat Seal: Including terms like "Mat Seal," "gel family seal," or "silicone family seal".
-- None: Explicitly stated as not supplied or no seal.
+Possible seal types:
 
-Provide the answer strictly as:
-WIRE SEAL: [Single Wire Seal/Injected/Mat Seal/None]
+- **Single Wire Seal**: If each wire is individually sealed with its own dedicated component (often called "single wire seal" or "individual seal"). Usually listed per wire gauge with part numbers or colors.
+
+- **Mat Seal**: A unified sealing element (sometimes called "mat seal", "gel seal", or "silicone family seal") that seals all cavities at once. Usually shown as a single part for the connector body.
+
+- **Injected**: If sealing is part of the connector molding process itself. Must be explicitly described as “injected seal” or “molded seal”.
+
+- **None**: If the document clearly states that no seal is used or no sealing is required.
+
+⚠️ Important:
+- Base your answer **only on structural and functional descriptions**, not just material names like "rubber" or "silicone".
+- Do not assume seal type unless the document makes it clear.
+
+Provide the result using this format:
+WIRE SEAL: [Single Wire Seal / Mat Seal / Injected / None / 9999 (if not found)]
 
 
 """
