@@ -820,12 +820,19 @@ HOUSING SEAL: [radial seal/interface seal/none]
 """
 
 WIRE_SEAL_PROMPT = """
-Determine the Wire Seal type:
+Determine the Wire Seal type from the given engineering document:
 
-    Wire seal describes the sealing of the space between wire and cavity wall, when a terminal is fitted in a cavity. There are different possibilities for sealing available: Single wire seal, Injected, Mat seal (includes “gel family seal” and “silicone family seal”), None.
+Wire seal refers explicitly to sealing between the wire and cavity wall when a terminal is fitted. Identify the type based on the "APPLICABLE TERMINALS AND WIRE SEALS" table or related notes in the document.
 
-    Output format:
-    WIRE SEAL: [Single Wire Seal/Injected/Mat Seal/None]
+Possible sealing types:
+- Single Wire Seal: Mentioned explicitly as "Single Wire Seal" or individually specified seal.
+- Injected: Explicitly stated as injected sealing.
+- Mat Seal: Including terms like "Mat Seal," "gel family seal," or "silicone family seal".
+- None: Explicitly stated as not supplied or no seal.
+
+Provide the answer strictly as:
+WIRE SEAL: [Single Wire Seal/Injected/Mat Seal/None]
+
 
 """
 
