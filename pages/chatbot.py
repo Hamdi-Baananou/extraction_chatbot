@@ -104,8 +104,8 @@ except Exception as e:
 MARKDOWN_TABLE_NAME = "markdown_chunks"
 ATTRIBUTE_TABLE_NAME = "Leoni_attributes"          # <<< VERIFY
 RPC_FUNCTION_NAME = "match_markdown_chunks"     # <<< VERIFY
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIMENSIONS = 384
+EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
+EMBEDDING_DIMENSIONS = 1024
 
 # ░░░  MODEL SWITCH  ░░░
 GROQ_MODEL_FOR_SQL = "qwen-qwq-32b"              ### <-- CHANGED
