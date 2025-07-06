@@ -48,6 +48,8 @@ def test_embedding_api():
         # Extract embeddings from the response
         if "embeddings" in result:
             embeddings = result["embeddings"]
+        elif "vectors" in result:
+            embeddings = result["vectors"]
         elif isinstance(result, list):
             embeddings = result
         else:
@@ -101,6 +103,8 @@ def test_single_embedding():
         # Extract single embedding
         if "embeddings" in result:
             embedding = result["embeddings"][0]
+        elif "vectors" in result:
+            embedding = result["vectors"][0]
         elif isinstance(result, list):
             embedding = result[0]
         else:

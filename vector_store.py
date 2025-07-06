@@ -47,9 +47,11 @@ class HuggingFaceAPIEmbeddings(Embeddings):
             result = response.json()
             
             # Extract embeddings from the response
-            # Assuming the API returns embeddings in the format: {"embeddings": [[...], [...]]}
+            # Handle different API response formats
             if "embeddings" in result:
                 embeddings = result["embeddings"]
+            elif "vectors" in result:
+                embeddings = result["vectors"]
             elif isinstance(result, list):
                 # If the API returns embeddings directly as a list
                 embeddings = result

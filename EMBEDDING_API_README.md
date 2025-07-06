@@ -57,7 +57,17 @@ And should return responses in one of these formats:
 }
 ```
 
-### Format 3: Wrapped in data/result key
+### Format 3: Wrapped in vectors key
+```json
+{
+  "vectors": [
+    [0.1, 0.2, 0.3, ...],
+    [0.4, 0.5, 0.6, ...]
+  ]
+}
+```
+
+### Format 4: Wrapped in data/result key
 ```json
 {
   "data": [

@@ -146,6 +146,8 @@ try:
         # Extract test embedding
         if "embeddings" in test_result:
             test_emb = test_result["embeddings"][0]
+        elif "vectors" in test_result:
+            test_emb = test_result["vectors"][0]
         elif isinstance(test_result, list):
             test_emb = test_result[0]
         else:
@@ -210,6 +212,8 @@ def get_query_embedding(text):
             # Extract embedding from response
             if "embeddings" in result:
                 return result["embeddings"][0]
+            elif "vectors" in result:
+                return result["vectors"][0]
             elif isinstance(result, list):
                 return result[0]
             else:
