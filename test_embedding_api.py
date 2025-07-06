@@ -17,6 +17,7 @@ def test_embedding_api():
     # API configuration
     api_url = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
     expected_dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", 1024))
+    timeout = int(os.getenv("EMBEDDING_TIMEOUT", 60))
     
     # Test texts
     test_texts = [
@@ -35,7 +36,7 @@ def test_embedding_api():
             api_url,
             headers={"Content-Type": "application/json"},
             json={"texts": test_texts},
-            timeout=30
+            timeout=timeout
         )
         
         # Check if the request was successful
@@ -84,6 +85,7 @@ def test_single_embedding():
     
     api_url = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
     expected_dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", 1024))
+    timeout = int(os.getenv("EMBEDDING_TIMEOUT", 60))
     test_text = "Single test sentence"
     
     print(f"\nTesting single embedding for: '{test_text}'")
@@ -94,7 +96,7 @@ def test_single_embedding():
             api_url,
             headers={"Content-Type": "application/json"},
             json={"texts": [test_text]},
-            timeout=30
+            timeout=timeout
         )
         
         response.raise_for_status()

@@ -29,6 +29,8 @@ NORMALIZE_EMBEDDINGS = True # Add this line (Often recommended for sentence tran
 USE_API_EMBEDDINGS = os.getenv("USE_API_EMBEDDINGS", "true").lower() == "true"
 EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
 EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", 1024))  # Default to 1024 for BAAI/bge-m3
+EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", 10))  # Number of texts to process per batch
+EMBEDDING_TIMEOUT = int(os.getenv("EMBEDDING_TIMEOUT", 60))  # Timeout in seconds for API requests
 
 # --- Vector Store Configuration ---
 # Define the persistence directory (can be None for in-memory)

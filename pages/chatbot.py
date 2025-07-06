@@ -138,7 +138,7 @@ try:
             EMBEDDING_API_URL,
             headers={"Content-Type": "application/json"},
             json={"texts": ["test"]},
-            timeout=30
+            timeout=config.EMBEDDING_TIMEOUT
         )
         test_response.raise_for_status()
         test_result = test_response.json()
@@ -204,7 +204,7 @@ def get_query_embedding(text):
                 EMBEDDING_API_URL,
                 headers={"Content-Type": "application/json"},
                 json={"texts": [text]},
-                timeout=30
+                timeout=config.EMBEDDING_TIMEOUT
             )
             response.raise_for_status()
             result = response.json()

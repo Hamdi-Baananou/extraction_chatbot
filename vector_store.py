@@ -24,20 +24,87 @@ class HuggingFaceAPIEmbeddings(Embeddings):
         logger.info(f"Initialized HuggingFace API embeddings with URL: {api_url}")
     
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Embed a list of documents using the Hugging Face API."""
+        """Embed a list of documents using the Hugging Face API with batching."""
         if not texts:
+            return []
+        
+        # Batch size - adjust based on your API's capacity
+        batch_size = config.EMBEDDING_BATCH_SIZE
+        all_embeddings = []
+        
+        # Process texts in batches
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            logger.debug(f"Processing batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size} with {len(batch_texts)} texts")
+            
+            try:
+                # Prepare the request payload
+                payload = {"texts": batch_texts}
+                
+                # Make the API request with increased timeout for batches
+                response = requests.post(
+                    self.api_url,
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                    timeout=config.EMBEDDING_TIMEOUT  # Configurable timeout for batch processing
+                )
+                
+                # Check if the request was successful
+                response.raise_for_status()
+                
+                # Parse the response
+                result = response.json()
+                
+                # Extract embeddings from the response
+                # Handle different API response formats
+                if "embeddings" in result:
+                    batch_embeddings = result["embeddings"]
+                elif "vectors" in result:
+                    batch_embeddings = result["vectors"]
+                elif isinstance(result, list):
+                    # If the API returns embeddings directly as a list
+                    batch_embeddings = result
+                else:
+                    # Try to find embeddings in the response structure
+                    batch_embeddings = result.get("data", result.get("result", result))
+                    if not isinstance(batch_embeddings, list):
+                        raise ValueError(f"Unexpected API response format: {result}")
+                
+                all_embeddings.extend(batch_embeddings)
+                logger.debug(f"Successfully embedded batch {i//batch_size + 1} with {len(batch_texts)} documents")
+                
+                # Add a small delay between batches to avoid overwhelming the API
+                if i + batch_size < len(texts):
+                    time.sleep(0.5)
+                
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API request failed for batch {i//batch_size + 1}: {e}")
+                raise
+            except (KeyError, ValueError, json.JSONDecodeError) as e:
+                logger.error(f"Failed to parse API response for batch {i//batch_size + 1}: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error during embedding for batch {i//batch_size + 1}: {e}")
+                raise
+        
+        logger.debug(f"Successfully embedded all {len(texts)} documents via API in batches")
+        return all_embeddings
+    
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a single query text using the Hugging Face API."""
+        if not text:
             return []
         
         try:
             # Prepare the request payload
-            payload = {"texts": texts}
+            payload = {"texts": [text]}
             
             # Make the API request
             response = requests.post(
                 self.api_url,
                 headers={"Content-Type": "application/json"},
                 json=payload,
-                timeout=30  # 30 second timeout
+                timeout=config.EMBEDDING_TIMEOUT
             )
             
             # Check if the request was successful
@@ -46,37 +113,25 @@ class HuggingFaceAPIEmbeddings(Embeddings):
             # Parse the response
             result = response.json()
             
-            # Extract embeddings from the response
-            # Handle different API response formats
+            # Extract embedding from the response
             if "embeddings" in result:
-                embeddings = result["embeddings"]
+                return result["embeddings"][0]
             elif "vectors" in result:
-                embeddings = result["vectors"]
+                return result["vectors"][0]
             elif isinstance(result, list):
-                # If the API returns embeddings directly as a list
-                embeddings = result
+                return result[0]
             else:
-                # Try to find embeddings in the response structure
-                embeddings = result.get("data", result.get("result", result))
-                if not isinstance(embeddings, list):
-                    raise ValueError(f"Unexpected API response format: {result}")
-            
-            logger.debug(f"Successfully embedded {len(texts)} documents via API")
-            return embeddings
-            
+                return result.get("data", result.get("result", result))[0]
+                
         except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed: {e}")
+            logger.error(f"API request failed for single query: {e}")
             raise
         except (KeyError, ValueError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to parse API response: {e}")
+            logger.error(f"Failed to parse API response for single query: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during embedding: {e}")
+            logger.error(f"Unexpected error during single query embedding: {e}")
             raise
-    
-    def embed_query(self, text: str) -> List[float]:
-        """Embed a single query text using the Hugging Face API."""
-        return self.embed_documents([text])[0]
 
 # --- Embedding Function ---
 @logger.catch(reraise=True) # Automatically log exceptions

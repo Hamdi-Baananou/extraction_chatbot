@@ -17,6 +17,12 @@ EMBEDDING_API_URL=https://hbaananou-embedder-model.hf.space/embed
 
 # Embedding dimensions (default: 1024 for BAAI/bge-m3)
 EMBEDDING_DIMENSIONS=1024
+
+# Batch size for processing multiple texts (default: 10)
+EMBEDDING_BATCH_SIZE=10
+
+# Timeout for API requests in seconds (default: 60)
+EMBEDDING_TIMEOUT=60
 ```
 
 ### Fallback to Local Embeddings
@@ -128,14 +134,17 @@ vector_store = Chroma.from_documents(
 4. **Flexibility**: Easy to switch between API and local embeddings
 5. **Streamlit Compatibility**: Works well with Streamlit's memory constraints
 6. **Dimension Validation**: Automatically validates that API returns correct 1024-dimensional embeddings
+7. **Batch Processing**: Processes large document sets in configurable batches to avoid timeouts
+8. **Configurable Timeouts**: Adjustable timeout settings for different API response times
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **API Timeout**: Increase the timeout in the code if needed (currently 30 seconds)
-2. **Response Format**: Ensure your API returns embeddings in one of the supported formats
-3. **Network Issues**: Check connectivity to the Hugging Face API endpoint
+1. **API Timeout**: Increase `EMBEDDING_TIMEOUT` if needed (default: 60 seconds)
+2. **Batch Size**: Reduce `EMBEDDING_BATCH_SIZE` if processing large documents (default: 10)
+3. **Response Format**: Ensure your API returns embeddings in one of the supported formats
+4. **Network Issues**: Check connectivity to the Hugging Face API endpoint
 
 ### Debug Mode
 
