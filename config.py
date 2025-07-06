@@ -25,6 +25,11 @@ EMBEDDING_DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu") # Add this line ('cpu' i
 NORMALIZE_EMBEDDINGS = True # Add this line (Often recommended for sentence transformers)
 # EMBEDDING_CACHE_DIR = os.getenv("EMBEDDING_CACHE_DIR", "./embedding_cache") # Optional: Specify cache dir
 
+# --- API Embedding Configuration ---
+USE_API_EMBEDDINGS = os.getenv("USE_API_EMBEDDINGS", "true").lower() == "true"
+EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
+EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", 1024))  # Default to 1024 for BAAI/bge-m3
+
 # --- Vector Store Configuration ---
 # Define the persistence directory (can be None for in-memory)
 CHROMA_PERSIST_DIRECTORY = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db_prod") # Use consistent variable name

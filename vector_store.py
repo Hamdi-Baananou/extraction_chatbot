@@ -3,28 +3,102 @@ from typing import List, Optional
 from loguru import logger
 import os
 import time
+import requests
+import json
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
 from langchain.vectorstores.base import VectorStoreRetriever
 from chromadb import Client as ChromaClient
+from langchain.embeddings.base import Embeddings
 
 import config # Import configuration
+
+# --- Custom Hugging Face API Embeddings ---
+class HuggingFaceAPIEmbeddings(Embeddings):
+    """Custom embeddings class that uses Hugging Face API instead of local model."""
+    
+    def __init__(self, api_url: str = "https://hbaananou-embedder-model.hf.space/embed"):
+        self.api_url = api_url
+        logger.info(f"Initialized HuggingFace API embeddings with URL: {api_url}")
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed a list of documents using the Hugging Face API."""
+        if not texts:
+            return []
+        
+        try:
+            # Prepare the request payload
+            payload = {"texts": texts}
+            
+            # Make the API request
+            response = requests.post(
+                self.api_url,
+                headers={"Content-Type": "application/json"},
+                json=payload,
+                timeout=30  # 30 second timeout
+            )
+            
+            # Check if the request was successful
+            response.raise_for_status()
+            
+            # Parse the response
+            result = response.json()
+            
+            # Extract embeddings from the response
+            # Assuming the API returns embeddings in the format: {"embeddings": [[...], [...]]}
+            if "embeddings" in result:
+                embeddings = result["embeddings"]
+            elif isinstance(result, list):
+                # If the API returns embeddings directly as a list
+                embeddings = result
+            else:
+                # Try to find embeddings in the response structure
+                embeddings = result.get("data", result.get("result", result))
+                if not isinstance(embeddings, list):
+                    raise ValueError(f"Unexpected API response format: {result}")
+            
+            logger.debug(f"Successfully embedded {len(texts)} documents via API")
+            return embeddings
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request failed: {e}")
+            raise
+        except (KeyError, ValueError, json.JSONDecodeError) as e:
+            logger.error(f"Failed to parse API response: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during embedding: {e}")
+            raise
+    
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a single query text using the Hugging Face API."""
+        return self.embed_documents([text])[0]
 
 # --- Embedding Function ---
 @logger.catch(reraise=True) # Automatically log exceptions
 def get_embedding_function():
-    """Initializes and returns the HuggingFace embedding function."""
-    model_kwargs = {'device': config.EMBEDDING_DEVICE}
-    encode_kwargs = {'normalize_embeddings': config.NORMALIZE_EMBEDDINGS}
+    """Initializes and returns the embedding function (API-based or local)."""
+    # Check if we should use the API-based embeddings
+    use_api_embeddings = os.getenv("USE_API_EMBEDDINGS", "true").lower() == "true"
+    
+    if use_api_embeddings:
+        api_url = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
+        logger.info(f"Using HuggingFace API embeddings: {api_url}")
+        return HuggingFaceAPIEmbeddings(api_url=api_url)
+    else:
+        # Fallback to local embeddings
+        logger.info("Using local HuggingFace embeddings")
+        model_kwargs = {'device': config.EMBEDDING_DEVICE}
+        encode_kwargs = {'normalize_embeddings': config.NORMALIZE_EMBEDDINGS}
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name=config.EMBEDDING_MODEL_NAME,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs,
-    )
-    return embeddings
+        embeddings = HuggingFaceEmbeddings(
+            model_name=config.EMBEDDING_MODEL_NAME,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs,
+        )
+        return embeddings
 
 # --- ChromaDB Setup and Retrieval ---
 _chroma_client = None # Module-level client cache
@@ -203,5 +277,3 @@ class ThresholdRetriever:
     async def aget_relevant_documents(self, query: str) -> List[Document]:
         """Async LangChain compatibility method."""
         return self.invoke(query)
-
-# Add this import at the top of vector_store.py

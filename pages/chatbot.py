@@ -10,7 +10,9 @@ from io import StringIO
 import contextlib
 from supabase import create_client, Client
 from sentence_transformers import SentenceTransformer
+import requests
 from groq import Groq
+import config
 
 # Initialize Streamlit
 st.set_page_config(
@@ -105,7 +107,7 @@ MARKDOWN_TABLE_NAME = "markdown_chunks"
 ATTRIBUTE_TABLE_NAME = "Leoni_attributes"          # <<< VERIFY
 RPC_FUNCTION_NAME = "match_markdown_chunks"     # <<< VERIFY
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
-EMBEDDING_DIMENSIONS = 1024
+EMBEDDING_DIMENSIONS = config.EMBEDDING_DIMENSIONS
 
 # ░░░  MODEL SWITCH  ░░░
 GROQ_MODEL_FOR_SQL = "qwen-qwq-32b"              ### <-- CHANGED
@@ -125,14 +127,44 @@ except Exception as e:
     st.error(f"Error initializing Supabase client: {e}")
     st.stop()
 
+# --- Embedding API Configuration ---
+EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-model.hf.space/embed")
+USE_API_EMBEDDINGS = os.getenv("USE_API_EMBEDDINGS", "true").lower() == "true"
+
 try:
-    st_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-    # st.success(f"Sentence Transformer model ({EMBEDDING_MODEL_NAME}) loaded.")
-    test_emb = st_model.encode("test")
-    if len(test_emb) != EMBEDDING_DIMENSIONS:
-        raise ValueError("Embedding dimension mismatch")
+    if USE_API_EMBEDDINGS:
+        # Test API embeddings
+        test_response = requests.post(
+            EMBEDDING_API_URL,
+            headers={"Content-Type": "application/json"},
+            json={"texts": ["test"]},
+            timeout=30
+        )
+        test_response.raise_for_status()
+        test_result = test_response.json()
+        
+        # Extract test embedding
+        if "embeddings" in test_result:
+            test_emb = test_result["embeddings"][0]
+        elif isinstance(test_result, list):
+            test_emb = test_result[0]
+        else:
+            test_emb = test_result.get("data", test_result.get("result", test_result))[0]
+        
+        if len(test_emb) != EMBEDDING_DIMENSIONS:
+            raise ValueError(f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSIONS}, got {len(test_emb)}")
+        
+        st_model = None  # We'll use API calls instead
+        # st.success(f"API embeddings initialized successfully.")
+    else:
+        # Fallback to local model
+        st_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        test_emb = st_model.encode("test")
+        if len(test_emb) != EMBEDDING_DIMENSIONS:
+            raise ValueError("Embedding dimension mismatch")
+        # st.success(f"Sentence Transformer model ({EMBEDDING_MODEL_NAME}) loaded.")
 except Exception as e:
-    st.error(f"Error loading Sentence Transformer model: {e}")
+    st.error(f"Error initializing embeddings: {e}")
     st.stop()
 
 try:
@@ -164,7 +196,27 @@ def get_query_embedding(text):
     if not text:
         return None
     try:
-        return st_model.encode(text).tolist()
+        if USE_API_EMBEDDINGS and st_model is None:
+            # Use API embeddings
+            response = requests.post(
+                EMBEDDING_API_URL,
+                headers={"Content-Type": "application/json"},
+                json={"texts": [text]},
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Extract embedding from response
+            if "embeddings" in result:
+                return result["embeddings"][0]
+            elif isinstance(result, list):
+                return result[0]
+            else:
+                return result.get("data", result.get("result", result))[0]
+        else:
+            # Use local model
+            return st_model.encode(text).tolist()
     except Exception as e:
         st.error(f"    Error generating query embedding: {e}")
         return None
