@@ -18,11 +18,14 @@ EMBEDDING_API_URL=https://hbaananou-embedder-model.hf.space/embed
 # Embedding dimensions (default: 1024 for BAAI/bge-m3)
 EMBEDDING_DIMENSIONS=1024
 
-# Batch size for processing multiple texts (default: 10)
-EMBEDDING_BATCH_SIZE=10
+# Batch size for processing multiple texts (default: 5 for large files)
+EMBEDDING_BATCH_SIZE=5
 
-# Timeout for API requests in seconds (default: 60)
-EMBEDDING_TIMEOUT=60
+# Timeout for API requests in seconds (default: 120 for large files)
+EMBEDDING_TIMEOUT=120
+
+# Maximum text length in characters (default: 4000)
+EMBEDDING_MAX_TEXT_LENGTH=4000
 ```
 
 ### Fallback to Local Embeddings
@@ -136,15 +139,19 @@ vector_store = Chroma.from_documents(
 6. **Dimension Validation**: Automatically validates that API returns correct 1024-dimensional embeddings
 7. **Batch Processing**: Processes large document sets in configurable batches to avoid timeouts
 8. **Configurable Timeouts**: Adjustable timeout settings for different API response times
+9. **Text Length Limiting**: Automatically truncates very long texts to prevent API overload
+10. **Retry Logic**: Automatic retries with exponential backoff for failed requests
+11. **Fallback Processing**: Individual text processing if batch processing fails
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **API Timeout**: Increase `EMBEDDING_TIMEOUT` if needed (default: 60 seconds)
-2. **Batch Size**: Reduce `EMBEDDING_BATCH_SIZE` if processing large documents (default: 10)
-3. **Response Format**: Ensure your API returns embeddings in one of the supported formats
-4. **Network Issues**: Check connectivity to the Hugging Face API endpoint
+1. **API Timeout**: Increase `EMBEDDING_TIMEOUT` if needed (default: 120 seconds for large files)
+2. **Batch Size**: Reduce `EMBEDDING_BATCH_SIZE` if processing large documents (default: 5 for large files)
+3. **Text Length**: Reduce `EMBEDDING_MAX_TEXT_LENGTH` if texts are too long (default: 4000 characters)
+4. **Response Format**: Ensure your API returns embeddings in one of the supported formats
+5. **Network Issues**: Check connectivity to the Hugging Face API endpoint
 
 ### Debug Mode
 

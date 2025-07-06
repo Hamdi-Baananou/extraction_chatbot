@@ -24,71 +24,130 @@ class HuggingFaceAPIEmbeddings(Embeddings):
         logger.info(f"Initialized HuggingFace API embeddings with URL: {api_url}")
     
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Embed a list of documents using the Hugging Face API with batching."""
+        """Embed a list of documents using the Hugging Face API with batching and text length limiting."""
         if not texts:
             return []
         
         # Batch size - adjust based on your API's capacity
         batch_size = config.EMBEDDING_BATCH_SIZE
+        max_text_length = config.EMBEDDING_MAX_TEXT_LENGTH
         all_embeddings = []
         
+        # Pre-process texts to limit length
+        processed_texts = []
+        for text in texts:
+            if len(text) > max_text_length:
+                logger.warning(f"Truncating text from {len(text)} to {max_text_length} characters")
+                processed_text = text[:max_text_length]
+            else:
+                processed_text = text
+            processed_texts.append(processed_text)
+        
         # Process texts in batches
-        for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i + batch_size]
-            logger.debug(f"Processing batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size} with {len(batch_texts)} texts")
+        for i in range(0, len(processed_texts), batch_size):
+            batch_texts = processed_texts[i:i + batch_size]
+            batch_num = i//batch_size + 1
+            total_batches = (len(processed_texts) + batch_size - 1)//batch_size
             
-            try:
-                # Prepare the request payload
-                payload = {"texts": batch_texts}
-                
-                # Make the API request with increased timeout for batches
-                response = requests.post(
-                    self.api_url,
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                    timeout=config.EMBEDDING_TIMEOUT  # Configurable timeout for batch processing
-                )
-                
-                # Check if the request was successful
-                response.raise_for_status()
-                
-                # Parse the response
-                result = response.json()
-                
-                # Extract embeddings from the response
-                # Handle different API response formats
-                if "embeddings" in result:
-                    batch_embeddings = result["embeddings"]
-                elif "vectors" in result:
-                    batch_embeddings = result["vectors"]
-                elif isinstance(result, list):
-                    # If the API returns embeddings directly as a list
-                    batch_embeddings = result
-                else:
-                    # Try to find embeddings in the response structure
-                    batch_embeddings = result.get("data", result.get("result", result))
-                    if not isinstance(batch_embeddings, list):
-                        raise ValueError(f"Unexpected API response format: {result}")
-                
-                all_embeddings.extend(batch_embeddings)
-                logger.debug(f"Successfully embedded batch {i//batch_size + 1} with {len(batch_texts)} documents")
-                
-                # Add a small delay between batches to avoid overwhelming the API
-                if i + batch_size < len(texts):
-                    time.sleep(0.5)
-                
-            except requests.exceptions.RequestException as e:
-                logger.error(f"API request failed for batch {i//batch_size + 1}: {e}")
-                raise
-            except (KeyError, ValueError, json.JSONDecodeError) as e:
-                logger.error(f"Failed to parse API response for batch {i//batch_size + 1}: {e}")
-                raise
-            except Exception as e:
-                logger.error(f"Unexpected error during embedding for batch {i//batch_size + 1}: {e}")
-                raise
+            logger.debug(f"Processing batch {batch_num}/{total_batches} with {len(batch_texts)} texts")
+            
+            # Calculate total characters in this batch
+            total_chars = sum(len(text) for text in batch_texts)
+            logger.debug(f"Batch {batch_num} total characters: {total_chars}")
+            
+            # Retry logic for failed batches
+            max_retries = 3
+            for retry in range(max_retries):
+                try:
+                    # Prepare the request payload
+                    payload = {"texts": batch_texts}
+                    
+                    # Make the API request with increased timeout for batches
+                    response = requests.post(
+                        self.api_url,
+                        headers={"Content-Type": "application/json"},
+                        json=payload,
+                        timeout=config.EMBEDDING_TIMEOUT  # Configurable timeout for batch processing
+                    )
+                    
+                    # Check if the request was successful
+                    response.raise_for_status()
+                    
+                    # Parse the response
+                    result = response.json()
+                    
+                    # Extract embeddings from the response
+                    # Handle different API response formats
+                    if "embeddings" in result:
+                        batch_embeddings = result["embeddings"]
+                    elif "vectors" in result:
+                        batch_embeddings = result["vectors"]
+                    elif isinstance(result, list):
+                        # If the API returns embeddings directly as a list
+                        batch_embeddings = result
+                    else:
+                        # Try to find embeddings in the response structure
+                        batch_embeddings = result.get("data", result.get("result", result))
+                        if not isinstance(batch_embeddings, list):
+                            raise ValueError(f"Unexpected API response format: {result}")
+                    
+                    all_embeddings.extend(batch_embeddings)
+                    logger.debug(f"Successfully embedded batch {batch_num} with {len(batch_texts)} documents")
+                    
+                    # Add a small delay between batches to avoid overwhelming the API
+                    if i + batch_size < len(processed_texts):
+                        time.sleep(1.0)  # Increased delay for large files
+                    
+                    break  # Success, exit retry loop
+                    
+                except requests.exceptions.Timeout as e:
+                    logger.warning(f"Timeout for batch {batch_num} (attempt {retry + 1}/{max_retries}): {e}")
+                    if retry == max_retries - 1:
+                        logger.error(f"All retries failed for batch {batch_num}")
+                        raise
+                    time.sleep(2.0)  # Wait before retry
+                    
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"API request failed for batch {batch_num}: {e}")
+                    raise
+                except (KeyError, ValueError, json.JSONDecodeError) as e:
+                    logger.error(f"Failed to parse API response for batch {batch_num}: {e}")
+                    raise
+                except Exception as e:
+                    logger.error(f"Unexpected error during embedding for batch {batch_num}: {e}")
+                    raise
         
         logger.debug(f"Successfully embedded all {len(texts)} documents via API in batches")
         return all_embeddings
+    
+    def embed_documents_fallback(self, texts: List[str]) -> List[List[float]]:
+        """Fallback method: embed documents one by one if batch processing fails."""
+        logger.warning("Using fallback method: processing texts individually")
+        embeddings = []
+        
+        for i, text in enumerate(texts):
+            try:
+                # Limit text length
+                if len(text) > config.EMBEDDING_MAX_TEXT_LENGTH:
+                    text = text[:config.EMBEDDING_MAX_TEXT_LENGTH]
+                    logger.warning(f"Truncating text {i+1} from {len(text)} to {config.EMBEDDING_MAX_TEXT_LENGTH} characters")
+                
+                # Embed single text
+                embedding = self.embed_query(text)
+                embeddings.append(embedding)
+                
+                logger.debug(f"Successfully embedded text {i+1}/{len(texts)}")
+                
+                # Small delay between individual requests
+                time.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Failed to embed text {i+1}: {e}")
+                # Return a zero vector as fallback
+                zero_vector = [0.0] * config.EMBEDDING_DIMENSIONS
+                embeddings.append(zero_vector)
+        
+        return embeddings
     
     def embed_query(self, text: str) -> List[float]:
         """Embed a single query text using the Hugging Face API."""
@@ -212,12 +271,38 @@ def setup_vector_store(
         logger.info(f"Creating/Updating vector store '{collection_name}' with {len(documents)} documents...")
 
         # *** Add persist_directory argument here ***
-        vector_store = Chroma.from_documents(
-            documents=documents,
-            embedding=embedding_function,
-            collection_name=collection_name,
-            persist_directory=persist_directory # <-- This is the crucial addition
-        )
+        try:
+            vector_store = Chroma.from_documents(
+                documents=documents,
+                embedding=embedding_function,
+                collection_name=collection_name,
+                persist_directory=persist_directory # <-- This is the crucial addition
+            )
+        except Exception as e:
+            logger.warning(f"Batch processing failed, trying fallback method: {e}")
+            # If batch processing fails, try individual processing
+            if hasattr(embedding_function, 'embed_documents_fallback'):
+                # Create a temporary embedding function that uses fallback
+                class FallbackEmbeddingFunction:
+                    def __init__(self, original_function):
+                        self.original_function = original_function
+                    
+                    def embed_documents(self, texts):
+                        return self.original_function.embed_documents_fallback(texts)
+                    
+                    def embed_query(self, text):
+                        return self.original_function.embed_query(text)
+                
+                fallback_embedding = FallbackEmbeddingFunction(embedding_function)
+                
+                vector_store = Chroma.from_documents(
+                    documents=documents,
+                    embedding=fallback_embedding,
+                    collection_name=collection_name,
+                    persist_directory=persist_directory
+                )
+            else:
+                raise e
 
         # Ensure persistence after creation/update
         if persist_directory:
