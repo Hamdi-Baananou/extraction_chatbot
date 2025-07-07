@@ -458,11 +458,13 @@ Extraction Instructions:
 {extraction_instructions}
 
 ---
-IMPORTANT: Respond with ONLY a single, valid JSON object containing exactly one key-value pair.
-- The key for the JSON object MUST be the string: "{attribute_key}"
-- The value MUST be the extracted result determined by following the Extraction Instructions using the Document Context provided above.
-- Provide the value as a JSON string. Examples: "GF, T", "none", "NOT FOUND", "Female", "7.2", "999".
-- Do NOT include any explanations, reasoning, or any text outside of the single JSON object in your response.
+IMPORTANT: For the attribute key "{attribute_key}", do the following:
+1. Independently answer the extraction task THREE times, as if reasoning from scratch each time, using only the provided Document Context and Extraction Instructions.
+2. Internally compare your three answers and select the one that is most consistent or most frequent among them. If all three answers are different, choose the one you believe is most justified by the context and instructions.
+3. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
+   - The key MUST be the string: "{attribute_key}"
+   - The value MUST be the final answer you selected (as a JSON string, e.g., "GF, T", "none", "NOT FOUND", "Female", "7.2", "999").
+4. Do NOT include any explanations, intermediate answers, reasoning, or any text outside of the single JSON object in your response.
 
 Example Output Format:
 {{"{attribute_key}": "extracted_value_from_pdf"}}
@@ -508,13 +510,14 @@ Extraction Instructions:
 {extraction_instructions}
 
 ---
-IMPORTANT: Follow the Extraction Instructions carefully using the website data.
-Respond with ONLY a single, valid JSON object containing exactly one key-value pair.
-- The key for the JSON object MUST be the string: "{attribute_key}"
-- The value MUST be the result obtained by applying the Extraction Instructions to the Cleaned Scraped Website Data.
-- Provide the value as a JSON string.
-- If the information cannot be determined from the Cleaned Scraped Website Data based on the instructions, the value MUST be "NOT FOUND".
-- Do NOT include any explanations or reasoning outside the JSON object.
+IMPORTANT: For the attribute key "{attribute_key}", do the following:
+1. Independently answer the extraction task THREE times, as if reasoning from scratch each time, using only the provided Cleaned Scraped Website Data and Extraction Instructions.
+2. Internally compare your three answers and select the one that is most consistent or most frequent among them. If all three answers are different, choose the one you believe is most justified by the context and instructions.
+3. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
+   - The key MUST be the string: "{attribute_key}"
+   - The value MUST be the final answer you selected (as a JSON string).
+   - If the information cannot be determined from the Cleaned Scraped Website Data based on the instructions, the value MUST be "NOT FOUND".
+4. Do NOT include any explanations, intermediate answers, reasoning, or any text outside the JSON object.
 
 Example Output Format:
 {{"{attribute_key}": "extracted_value_based_on_instructions"}}
