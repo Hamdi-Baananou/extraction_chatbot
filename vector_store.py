@@ -14,6 +14,10 @@ from chromadb import Client as ChromaClient
 from langchain.embeddings.base import Embeddings
 
 import config # Import configuration
+import random
+import numpy as np
+random.seed(42)
+np.random.seed(42)
 
 # --- Custom Hugging Face API Embeddings ---
 class HuggingFaceAPIEmbeddings(Embeddings):
@@ -254,6 +258,9 @@ def setup_vector_store(
     if not embedding_function:
         logger.error("Embedding function is not available for setup_vector_store.")
         return None
+
+    # Sort documents by source and page for deterministic indexing
+    documents = sorted(documents, key=lambda doc: (doc.metadata.get('source', ''), doc.metadata.get('page', 0)))
 
     persist_directory = config.CHROMA_PERSIST_DIRECTORY
     collection_name = config.COLLECTION_NAME
