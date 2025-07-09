@@ -47,11 +47,11 @@ is_persistent = bool(CHROMA_PERSIST_DIRECTORY) # True if directory is set, False
 
 # --- Retriever Configuration ---
 RETRIEVER_K = int(os.getenv("RETRIEVER_K", 8)) # Renamed from RETRIEVER_SEARCH_K
-VECTOR_SIMILARITY_THRESHOLD = float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", 0.5)) # Add similarity threshold
+VECTOR_SIMILARITY_THRESHOLD = float(os.getenv("VECTOR_SIMILARITY_THRESHOLD", 0.8)) # Add similarity threshold
 
 # --- LLM Request Configuration ---
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0.0)) # Adjusted default
-LLM_MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", 131072))
+LLM_MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", 8192))
 
 # --- Logging ---
 # LOG_LEVEL = "INFO" # Can be set via environment if needed
