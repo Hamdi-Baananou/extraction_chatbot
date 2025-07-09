@@ -18,6 +18,32 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 from bs4 import BeautifulSoup # Import BeautifulSoup
 
+import hashlib
+import datetime
+import os
+
+RETRIEVED_CHUNKS_LOG = os.path.join(os.path.dirname(__file__), 'retrieved_chunks_log.jsonl')
+
+def _hash_chunk(chunk):
+    # Hash chunk content and metadata for reproducibility
+    m = hashlib.sha256()
+    m.update(chunk.page_content.encode('utf-8'))
+    m.update(json.dumps(chunk.metadata, sort_keys=True).encode('utf-8'))
+    return m.hexdigest()
+
+def _log_retrieved_chunks(attribute_key, query, chunks):
+    # Store a record of retrieved chunks for this attribute and query
+    record = {
+        'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
+        'attribute_key': attribute_key,
+        'query': query,
+        'chunk_hashes': [_hash_chunk(chunk) for chunk in chunks],
+        'chunk_metadata': [chunk.metadata for chunk in chunks],
+        'num_chunks': len(chunks)
+    }
+    with open(RETRIEVED_CHUNKS_LOG, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(record) + '\n')
+
 # --- Initialize LLM ---
 @logger.catch(reraise=True) # Keep catch for unexpected errors during init
 def initialize_llm():
@@ -68,6 +94,7 @@ def retrieve_and_log_chunks(retriever, query: str, attribute_key: str):
         
         if not chunks:
             logger.warning(f"❌ No chunks retrieved for attribute '{attribute_key}'")
+            _log_retrieved_chunks(attribute_key, query, [])
             return []
         
         logger.info(f"✅ Retrieved {len(chunks)} chunks for attribute '{attribute_key}':")
@@ -79,11 +106,13 @@ def retrieve_and_log_chunks(retriever, query: str, attribute_key: str):
             
             logger.info(f"  📄 Chunk {i+1}: Source='{source}', Page={page}, StartIndex={start_index}")
             logger.info(f"     Content: {chunk.page_content[:200]}{'...' if len(chunk.page_content) > 200 else ''}")
+        _log_retrieved_chunks(attribute_key, query, chunks)
         
         return chunks
         
     except Exception as e:
         logger.error(f"❌ Error retrieving chunks for attribute '{attribute_key}': {e}")
+        _log_retrieved_chunks(attribute_key, query, [])
         return []
 
 @logger.catch(reraise=True)
