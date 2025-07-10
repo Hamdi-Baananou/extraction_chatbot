@@ -647,21 +647,18 @@ You are an expert data extractor. Your goal is to answer a specific piece of inf
 Extraction Instructions:
 {extraction_instructions}
 
-Available Dictionary Values for "{attribute_key}":
-{available_values}
-
 ---
 IMPORTANT: For the attribute key "{attribute_key}", do the following:
-1. Look for information in the Cleaned Scraped Website Data that matches the Extraction Instructions
-2. Find the BEST MATCH from the Available Dictionary Values above
-3. If no match is found in the dictionary, use "NOT FOUND" or appropriate default value
-4. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
+1. Independently answer the extraction task THREE times, as if reasoning from scratch each time, using only the provided Cleaned Scraped Website Data and Extraction Instructions.
+2. Internally compare your three answers and select the one that is most consistent or most frequent among them. If all three answers are different, choose the one you believe is most justified by the context and instructions.
+3. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
    - The key MUST be the string: "{attribute_key}"
-   - The value MUST be one of the available dictionary values or "NOT FOUND"
-5. Do NOT include any explanations, intermediate answers, reasoning, or any text outside the JSON object.
+   - The value MUST be the final answer you selected (as a JSON string).
+   - If the information cannot be determined from the Cleaned Scraped Website Data based on the instructions, the value MUST be "NOT FOUND".
+4. Do NOT include any explanations, intermediate answers, reasoning, or any text outside the JSON object.
 
 Example Output Format:
-{{"{attribute_key}": "best_match_from_dictionary"}}
+{{"{attribute_key}": "extracted_value_based_on_instructions"}}
 
 Output:
 """
@@ -672,8 +669,7 @@ Output:
         RunnableParallel(
             cleaned_web_data=lambda x: x['cleaned_web_data'],
             extraction_instructions=lambda x: x['extraction_instructions'],
-            attribute_key=lambda x: x['attribute_key'],
-            available_values=lambda x: str(ATTRIBUTE_DICT.get(x['attribute_key'], []))
+            attribute_key=lambda x: x['attribute_key']
         )
         | prompt
         | llm
