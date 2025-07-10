@@ -21,8 +21,23 @@ from bs4 import BeautifulSoup # Import BeautifulSoup
 import hashlib
 import datetime
 import os
+import json
 
 RETRIEVED_CHUNKS_LOG = os.path.join(os.path.dirname(__file__), 'retrieved_chunks_log.jsonl')
+
+# Load attribute dictionary
+def load_attribute_dictionary():
+    """Load the attribute dictionary from JSON file."""
+    try:
+        dict_path = os.path.join(os.path.dirname(__file__), 'attribute_dictionary.json')
+        with open(dict_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load attribute dictionary: {e}")
+        return {}
+
+# Global attribute dictionary
+ATTRIBUTE_DICT = load_attribute_dictionary()
 
 def _hash_chunk(chunk):
     # Hash chunk content and metadata for reproducibility
@@ -85,33 +100,122 @@ def format_docs(docs: List[Document]) -> str:
         )
     return "\n\n---\n\n".join(context_parts)
 
+def create_enhanced_search_queries(attribute_key: str, base_query: str) -> list:
+    """Create enhanced search queries using dictionary values and synonyms."""
+    queries = [base_query]  # Always include the original query
+    
+    # Get dictionary values for this attribute
+    dict_values = ATTRIBUTE_DICT.get(attribute_key, [])
+    
+    # Create attribute-specific search terms
+    attribute_terms = {
+        "Material Filling": ["filling", "additive", "filler", "glass fiber", "GF", "GB", "MF", "talcum"],
+        "Material Name": ["material", "polymer", "PA", "PBT", "PP", "PET", "PC", "silicone", "rubber"],
+        "Pull-To-Seat": ["pull to seat", "pull-back", "tug-lock", "terminal insertion", "seating"],
+        "Gender": ["gender", "male", "female", "plug", "receptacle", "socket", "header"],
+        "Height [MM]": ["height", "Y-axis", "total height", "thickness"],
+        "Length [MM]": ["length", "Z-axis", "depth", "insertion depth"],
+        "Width [MM]": ["width", "X-axis", "diameter"],
+        "Number of Cavities": ["cavity", "position", "way", "pin count", "terminal count"],
+        "Number of Rows": ["row", "grid", "arrangement", "layout"],
+        "Mechanical Coding": ["coding", "keying", "polarization", "mechanical key"],
+        "Colour": ["color", "colour", "black", "white", "red", "blue", "yellow"],
+        "Colour Coding": ["color coding", "colour coding", "coded components"],
+        "Working Temperature": ["temperature", "thermal", "operating temp", "min temp", "max temp"],
+        "Housing Seal": ["seal", "sealing", "radial seal", "interface seal", "ring seal"],
+        "Wire Seal": ["wire seal", "individual seal", "mat seal", "gel seal"],
+        "Sealing": ["sealing", "waterproof", "dustproof", "IP rating"],
+        "Sealing Class": ["IP", "ingress protection", "IPx0", "IPx4", "IPx6", "IPx7"],
+        "Contact Systems": ["contact system", "terminal system", "MQS", "MCP", "TAB", "MLK"],
+        "Terminal Position Assurance": ["TPA", "terminal position assurance", "anti-backout"],
+        "Connector Position Assurance": ["CPA", "connector position assurance", "secondary lock"],
+        "Name of Closed Cavities": ["closed cavity", "blocked position", "plugged cavity"],
+        "Pre-assembled": ["pre-assembled", "assembly", "disassembly", "delivered as"],
+        "Type of Connector": ["connector type", "standard", "antenna", "relay holder", "bulb holder"],
+        "Set/Kit": ["set", "kit", "accessories", "components"],
+        "HV Qualified": ["HV", "high voltage", "voltage", "qualified", "certified"]
+    }
+    
+    # Add attribute-specific terms
+    if attribute_key in attribute_terms:
+        queries.extend(attribute_terms[attribute_key])
+    
+    # Add dictionary values as search terms (for better matching)
+    for value in dict_values[:10]:  # Limit to first 10 values to avoid too many queries
+        if isinstance(value, str) and len(value) > 1:
+            queries.append(value)
+    
+    # Create combined queries using base query + dictionary values
+    if dict_values:
+        for value in dict_values[:5]:  # Use top 5 dictionary values
+            if isinstance(value, str) and len(value) > 1:
+                combined_query = f"{base_query} {value}"
+                queries.append(combined_query)
+    
+    # Remove duplicates and limit total queries
+    unique_queries = list(dict.fromkeys(queries))[:20]  # Increased to 20 queries
+    
+    return unique_queries
+
 def retrieve_and_log_chunks(retriever, query: str, attribute_key: str):
-    """Retrieves chunks from the retriever and logs them for debugging."""
-    logger.info(f"🔍 RETRIEVING CHUNKS for attribute '{attribute_key}' with query: '{query}'")
+    """Retrieves chunks from the retriever using enhanced search queries and logs them for debugging."""
+    logger.info(f"🔍 RETRIEVING CHUNKS for attribute '{attribute_key}' with base query: '{query}'")
+    
+    # Create enhanced search queries
+    enhanced_queries = create_enhanced_search_queries(attribute_key, query)
+    logger.info(f"📋 Using {len(enhanced_queries)} enhanced search queries: {enhanced_queries[:5]}...")
+    
+    all_chunks = []
+    seen_chunks = set()  # Track unique chunks by content hash
     
     try:
-        chunks = retriever.invoke(query)
+        # Try each enhanced query
+        for i, search_query in enumerate(enhanced_queries):
+            logger.debug(f"🔍 Search {i+1}/{len(enhanced_queries)}: '{search_query}'")
+            
+            try:
+                chunks = retriever.invoke(search_query)
+                
+                if chunks:
+                    # Add unique chunks only
+                    for chunk in chunks:
+                        chunk_hash = _hash_chunk(chunk)
+                        if chunk_hash not in seen_chunks:
+                            seen_chunks.add(chunk_hash)
+                            all_chunks.append(chunk)
+                            logger.debug(f"  ✅ Added unique chunk from query '{search_query}'")
+                
+            except Exception as e:
+                logger.warning(f"❌ Query '{search_query}' failed: {e}")
+                continue
         
-        if not chunks:
-            logger.warning(f"❌ No chunks retrieved for attribute '{attribute_key}'")
+        # Limit total chunks to avoid overwhelming the LLM
+        max_chunks = 10
+        if len(all_chunks) > max_chunks:
+            logger.info(f"📊 Limiting chunks from {len(all_chunks)} to {max_chunks}")
+            all_chunks = all_chunks[:max_chunks]
+        
+        if not all_chunks:
+            logger.warning(f"❌ No chunks retrieved for attribute '{attribute_key}' after trying {len(enhanced_queries)} queries")
             _log_retrieved_chunks(attribute_key, query, [])
             return []
         
-        logger.info(f"✅ Retrieved {len(chunks)} chunks for attribute '{attribute_key}':")
+        logger.info(f"✅ Retrieved {len(all_chunks)} unique chunks for attribute '{attribute_key}' from {len(enhanced_queries)} queries:")
         
-        for i, chunk in enumerate(chunks):
+        for i, chunk in enumerate(all_chunks):
             source = chunk.metadata.get('source', 'Unknown')
             page = chunk.metadata.get('page', 'N/A')
             start_index = chunk.metadata.get('start_index', 'N/A')
             
             logger.info(f"  📄 Chunk {i+1}: Source='{source}', Page={page}, StartIndex={start_index}")
             logger.info(f"     Content: {chunk.page_content[:200]}{'...' if len(chunk.page_content) > 200 else ''}")
-        _log_retrieved_chunks(attribute_key, query, chunks)
         
-        return chunks
+        _log_retrieved_chunks(attribute_key, query, all_chunks)
+        
+        return all_chunks
         
     except Exception as e:
-        logger.error(f"❌ Error retrieving chunks for attribute '{attribute_key}': {e}")
+        logger.error(f"❌ Error in enhanced retrieval for attribute '{attribute_key}': {e}")
         _log_retrieved_chunks(attribute_key, query, [])
         return []
 
@@ -486,17 +590,21 @@ Part Number Information (if provided by user):
 Extraction Instructions:
 {extraction_instructions}
 
+Available Dictionary Values for "{attribute_key}":
+{available_values}
+
 ---
 IMPORTANT: For the attribute key "{attribute_key}", do the following:
-1. Independently answer the extraction task THREE times, as if reasoning from scratch each time, using only the provided Document Context and Extraction Instructions.
-2. Internally compare your three answers and select the one that is most consistent or most frequent among them. If all three answers are different, choose the one you believe is most justified by the context and instructions.
-3. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
+1. Look for information in the Document Context that matches the Extraction Instructions
+2. Find the BEST MATCH from the Available Dictionary Values above
+3. If no match is found in the dictionary, use "NOT FOUND" or appropriate default value
+4. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
    - The key MUST be the string: "{attribute_key}"
-   - The value MUST be the final answer you selected (as a JSON string, e.g., "GF, T", "none", "NOT FOUND", "Female", "7.2", "999").
-4. Do NOT include any explanations, intermediate answers, reasoning, or any text outside of the single JSON object in your response.
+   - The value MUST be one of the available dictionary values or "NOT FOUND"
+5. Do NOT include any explanations, intermediate answers, reasoning, or any text outside of the single JSON object in your response.
 
 Example Output Format:
-{{"{attribute_key}": "extracted_value_from_pdf"}}
+{{"{attribute_key}": "best_match_from_dictionary"}}
 
 Output:
 """
@@ -508,7 +616,8 @@ Output:
             context=lambda x: format_docs(retrieve_and_log_chunks(retriever, x['extraction_instructions'], x['attribute_key'])),
             extraction_instructions=lambda x: x['extraction_instructions'],
             attribute_key=lambda x: x['attribute_key'],
-            part_number=lambda x: x.get('part_number', "Not Provided")
+            part_number=lambda x: x.get('part_number', "Not Provided"),
+            available_values=lambda x: str(ATTRIBUTE_DICT.get(x['attribute_key'], []))
         )
         | prompt
         | llm
@@ -538,18 +647,21 @@ You are an expert data extractor. Your goal is to answer a specific piece of inf
 Extraction Instructions:
 {extraction_instructions}
 
+Available Dictionary Values for "{attribute_key}":
+{available_values}
+
 ---
 IMPORTANT: For the attribute key "{attribute_key}", do the following:
-1. Independently answer the extraction task THREE times, as if reasoning from scratch each time, using only the provided Cleaned Scraped Website Data and Extraction Instructions.
-2. Internally compare your three answers and select the one that is most consistent or most frequent among them. If all three answers are different, choose the one you believe is most justified by the context and instructions.
-3. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
+1. Look for information in the Cleaned Scraped Website Data that matches the Extraction Instructions
+2. Find the BEST MATCH from the Available Dictionary Values above
+3. If no match is found in the dictionary, use "NOT FOUND" or appropriate default value
+4. Respond with ONLY a single, valid JSON object containing exactly one key-value pair:
    - The key MUST be the string: "{attribute_key}"
-   - The value MUST be the final answer you selected (as a JSON string).
-   - If the information cannot be determined from the Cleaned Scraped Website Data based on the instructions, the value MUST be "NOT FOUND".
-4. Do NOT include any explanations, intermediate answers, reasoning, or any text outside the JSON object.
+   - The value MUST be one of the available dictionary values or "NOT FOUND"
+5. Do NOT include any explanations, intermediate answers, reasoning, or any text outside the JSON object.
 
 Example Output Format:
-{{"{attribute_key}": "extracted_value_based_on_instructions"}}
+{{"{attribute_key}": "best_match_from_dictionary"}}
 
 Output:
 """
@@ -560,7 +672,8 @@ Output:
         RunnableParallel(
             cleaned_web_data=lambda x: x['cleaned_web_data'],
             extraction_instructions=lambda x: x['extraction_instructions'],
-            attribute_key=lambda x: x['attribute_key']
+            attribute_key=lambda x: x['attribute_key'],
+            available_values=lambda x: str(ATTRIBUTE_DICT.get(x['attribute_key'], []))
         )
         | prompt
         | llm
