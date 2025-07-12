@@ -14,8 +14,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from llm_interface import (
     create_numind_extraction_chain,
     extract_with_numind_from_bytes,
+    extract_with_numind_using_schema,
     extract_specific_attribute_from_numind_result
 )
+from numind_schema_config import get_custom_schema
 
 async def test_numind_integration():
     """Test the NuMind integration functions."""
@@ -35,23 +37,27 @@ async def test_numind_integration():
         print(f"❌ Error creating NuMind client: {e}")
         return False
     
-    # Test 2: Test with a sample PDF (if available)
-    print("\n2. Testing NuMind extraction...")
+    # Test 2: Test with a sample PDF using custom schema
+    print("\n2. Testing NuMind extraction with custom schema...")
     
     # Create a simple test PDF content (this is just for testing the API call)
     # In a real scenario, you would use an actual PDF file
     test_pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n72 720 Td\n(Test PDF Content) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000204 00000 n \ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n297\n%%EOF"
     
+    # Get the custom schema
+    custom_schema = get_custom_schema()
+    print(f"   Using custom schema with {len(custom_schema.get('properties', {}))} properties")
+    
     try:
-        result = await extract_with_numind_from_bytes(client, test_pdf_content, "test_attribute")
+        result = await extract_with_numind_using_schema(client, test_pdf_content, custom_schema)
         if result:
-            print("✅ NuMind extraction completed successfully")
+            print("✅ NuMind extraction with custom schema completed successfully")
             print(f"   Result keys: {list(result.keys())}")
         else:
-            print("❌ NuMind extraction returned no result")
+            print("❌ NuMind extraction with custom schema returned no result")
             return False
     except Exception as e:
-        print(f"❌ Error during NuMind extraction: {e}")
+        print(f"❌ Error during NuMind extraction with custom schema: {e}")
         return False
     
     # Test 3: Test attribute extraction from result

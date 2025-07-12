@@ -43,6 +43,35 @@ The system includes default values for testing:
 - API Key: Pre-configured test key (replace with your own)
 - Project ID: `dab6080e-5409-43b0-8f02-7a844ba933d5`
 
+### Extraction Schema Configuration
+
+**IMPORTANT**: To get the same results as your NuMind playground, you need to configure the extraction schema in `numind_schema_config.py`.
+
+1. **Get your schema from NuMind playground:**
+   - Go to your NuMind project
+   - Look at the extraction schema configuration
+   - Copy the exact schema structure
+
+2. **Update the configuration file:**
+   - Open `numind_schema_config.py`
+   - Replace `CUSTOM_EXTRACTION_SCHEMA` with your actual schema
+   - Update `CUSTOM_EXTRACTION_INSTRUCTIONS` if needed
+
+3. **Example schema structure:**
+   ```python
+   CUSTOM_EXTRACTION_SCHEMA = {
+       "type": "object",
+       "properties": {
+           "Material Name": {
+               "type": "string",
+               "description": "The main material name of the connector"
+           },
+           # ... add all your attributes here
+       },
+       "required": []
+   }
+   ```
+
 ## Implementation Details
 
 ### New Functions in `llm_interface.py`

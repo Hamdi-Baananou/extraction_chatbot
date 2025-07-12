@@ -710,47 +710,10 @@ def create_numind_extraction_chain():
         logger.error(f"Failed to initialize NuMind client: {e}")
         return None
 
-async def extract_with_numind(client, file_path: str, attribute_key: str) -> Optional[Dict[str, Any]]:
-    """
-    Extract specific attribute using NuMind API.
-    
-    Args:
-        client: NuMind client instance
-        file_path: Path to the PDF file to extract from
-        attribute_key: The attribute key to extract
-        
-    Returns:
-        Dictionary with extraction result or None if failed
-    """
-    if not client or not file_path or not attribute_key:
-        logger.warning("NuMind extraction skipped: missing client, file_path, or attribute_key")
-        return None
-        
-    try:
-        logger.info(f"Starting NuMind extraction for attribute '{attribute_key}' from file: {file_path}")
-        
-        # Read the file as bytes
-        with open(file_path, "rb") as file:
-            input_file = file.read()
-        
-        # Call the NuMind API
-        output_schema = client.post_api_projects_projectid_extract(NUMIND_PROJECT_ID, input_file)
-        
-        if output_schema and hasattr(output_schema, 'model_dump'):
-            result = output_schema.model_dump()
-            logger.success(f"NuMind extraction completed for '{attribute_key}'")
-            return result
-        else:
-            logger.warning(f"NuMind extraction returned invalid result for '{attribute_key}'")
-            return None
-            
-    except Exception as e:
-        logger.error(f"NuMind extraction failed for '{attribute_key}': {e}")
-        return None
-
 async def extract_with_numind_from_bytes(client, file_bytes: bytes, attribute_key: str) -> Optional[Dict[str, Any]]:
     """
     Extract specific attribute using NuMind API with file bytes.
+    Uses the extraction schema configured in the NuMind project.
     
     Args:
         client: NuMind client instance
@@ -767,12 +730,22 @@ async def extract_with_numind_from_bytes(client, file_bytes: bytes, attribute_ke
     try:
         logger.info(f"Starting NuMind extraction for attribute '{attribute_key}' from file bytes (size: {len(file_bytes)})")
         
-        # Call the NuMind API directly with file bytes
+        # Get the extraction schema from the project first
+        try:
+            project_info = client.get_api_projects_projectid(NUMIND_PROJECT_ID)
+            logger.info(f"Retrieved project info: {project_info}")
+        except Exception as e:
+            logger.warning(f"Could not retrieve project info: {e}")
+            project_info = None
+        
+        # Call the NuMind API with the configured extraction schema
+        # The API will use the extraction template configured in your NuMind project
         output_schema = client.post_api_projects_projectid_extract(NUMIND_PROJECT_ID, file_bytes)
         
         if output_schema and hasattr(output_schema, 'model_dump'):
             result = output_schema.model_dump()
             logger.success(f"NuMind extraction completed for '{attribute_key}'")
+            logger.debug(f"NuMind result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
             return result
         else:
             logger.warning(f"NuMind extraction returned invalid result for '{attribute_key}'")
@@ -782,47 +755,163 @@ async def extract_with_numind_from_bytes(client, file_bytes: bytes, attribute_ke
         logger.error(f"NuMind extraction failed for '{attribute_key}': {e}")
         return None
 
-def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any], attribute_key: str) -> Optional[str]:
+async def extract_with_numind_using_schema(client, file_bytes: bytes, extraction_schema: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    Extract a specific attribute value from NuMind result.
+    Extract using NuMind API with a specific extraction schema.
+    This allows you to use the exact same schema as your NuMind playground.
     
     Args:
-        numind_result: The result dictionary from NuMind extraction
-        attribute_key: The specific attribute key to extract
+        client: NuMind client instance
+        file_bytes: File content as bytes
+        extraction_schema: The extraction schema to use (from your NuMind playground)
         
     Returns:
-        The extracted value as string, or None if not found
+        Dictionary with extraction result or None if failed
     """
-    if not numind_result or not attribute_key:
+    if not client or not file_bytes or not extraction_schema:
+        logger.warning("NuMind extraction skipped: missing client, file_bytes, or extraction_schema")
         return None
         
     try:
-        # Navigate through the NuMind result structure to find the attribute
-        # The exact structure depends on your NuMind project configuration
-        # This is a generic approach - you may need to adjust based on your schema
+        logger.info(f"Starting NuMind extraction with custom schema from file bytes (size: {len(file_bytes)})")
         
-        # Try direct key access first
-        if attribute_key in numind_result:
-            value = numind_result[attribute_key]
-            return str(value) if value is not None else None
+        # Call the NuMind API with the specific extraction schema
+        output_schema = client.post_api_projects_projectid_extract(
+            NUMIND_PROJECT_ID, 
+            file_bytes,
+            extraction_schema=extraction_schema
+        )
+        
+        if output_schema and hasattr(output_schema, 'model_dump'):
+            result = output_schema.model_dump()
+            logger.success("NuMind extraction with custom schema completed")
+            logger.debug(f"NuMind result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
+            return result
+        else:
+            logger.warning("NuMind extraction with custom schema returned invalid result")
+            return None
             
-        # Try nested access (common in structured extraction)
-        for key, value in numind_result.items():
-            if isinstance(value, dict) and attribute_key in value:
-                nested_value = value[attribute_key]
-                return str(nested_value) if nested_value is not None else None
-                
-        # Try case-insensitive search
-        for key, value in numind_result.items():
-            if key.lower() == attribute_key.lower():
-                return str(value) if value is not None else None
-                
-        logger.warning(f"Attribute '{attribute_key}' not found in NuMind result")
-        return None
-        
     except Exception as e:
-        logger.error(f"Error extracting attribute '{attribute_key}' from NuMind result: {e}")
+        logger.error(f"NuMind extraction with custom schema failed: {e}")
         return None
+
+def get_default_extraction_schema() -> Dict[str, Any]:
+    """
+    Returns the default extraction schema that matches your NuMind playground configuration.
+    You should replace this with the actual schema from your NuMind project.
+    """
+    # This is a template - you need to replace this with your actual NuMind extraction schema
+    # You can get this from your NuMind playground by copying the schema configuration
+    return {
+        "type": "object",
+        "properties": {
+            "Material Filling": {
+                "type": "string",
+                "description": "The material filling or additive used in the connector"
+            },
+            "Material Name": {
+                "type": "string", 
+                "description": "The main material name of the connector"
+            },
+            "Pull-to-Seat": {
+                "type": "string",
+                "description": "Pull-to-seat force or mechanism information"
+            },
+            "Gender": {
+                "type": "string",
+                "description": "The gender of the connector (male/female)"
+            },
+            "Height [MM]": {
+                "type": "string",
+                "description": "Height of the connector in millimeters"
+            },
+            "Length [MM]": {
+                "type": "string",
+                "description": "Length of the connector in millimeters"
+            },
+            "Width [MM]": {
+                "type": "string",
+                "description": "Width of the connector in millimeters"
+            },
+            "Number of Cavities": {
+                "type": "string",
+                "description": "Number of cavities or positions in the connector"
+            },
+            "Number of Rows": {
+                "type": "string",
+                "description": "Number of rows in the connector"
+            },
+            "Mechanical Coding": {
+                "type": "string",
+                "description": "Mechanical coding or keying information"
+            },
+            "Colour": {
+                "type": "string",
+                "description": "Color of the connector"
+            },
+            "Colour Coding": {
+                "type": "string",
+                "description": "Color coding information"
+            },
+            "Max. Working Temperature [°C]": {
+                "type": "string",
+                "description": "Maximum working temperature in Celsius"
+            },
+            "Min. Working Temperature [°C]": {
+                "type": "string",
+                "description": "Minimum working temperature in Celsius"
+            },
+            "Housing Seal": {
+                "type": "string",
+                "description": "Housing seal information"
+            },
+            "Wire Seal": {
+                "type": "string",
+                "description": "Wire seal information"
+            },
+            "Sealing": {
+                "type": "string",
+                "description": "Sealing information"
+            },
+            "Sealing Class": {
+                "type": "string",
+                "description": "Sealing class or IP rating"
+            },
+            "Contact Systems": {
+                "type": "string",
+                "description": "Contact system type"
+            },
+            "Terminal Position Assurance": {
+                "type": "string",
+                "description": "Terminal position assurance information"
+            },
+            "Connector Position Assurance": {
+                "type": "string",
+                "description": "Connector position assurance information"
+            },
+            "Closed Cavities": {
+                "type": "string",
+                "description": "Information about closed cavities"
+            },
+            "Pre-Assembled": {
+                "type": "string",
+                "description": "Pre-assembly information"
+            },
+            "Type of Connector": {
+                "type": "string",
+                "description": "Type of connector"
+            },
+            "Set/Kit": {
+                "type": "string",
+                "description": "Set or kit information"
+            },
+            "HV Qualified": {
+                "type": "string",
+                "description": "High voltage qualification information"
+            }
+        },
+        "required": []
+    }
 
 # --- Helper function to invoke chain and process response (KEEP THIS) ---
 async def _invoke_chain_and_process(chain, input_data, attribute_key):
