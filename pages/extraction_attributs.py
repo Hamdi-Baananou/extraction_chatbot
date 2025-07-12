@@ -276,7 +276,6 @@ from llm_interface import (
     _invoke_chain_and_process,
     scrape_website_table_html,
     create_numind_extraction_chain,
-    extract_with_numind,
     extract_with_numind_from_bytes,
     extract_with_numind_using_schema,
     get_default_extraction_schema,
