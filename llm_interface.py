@@ -116,8 +116,8 @@ def create_enhanced_search_queries(attribute_key: str, base_query: str) -> list:
         "Height [MM]": ["height", "Y-axis", "total height", "thickness"],
         "Length [MM]": ["length", "Z-axis", "depth", "insertion depth"],
         "Width [MM]": ["width", "X-axis", "diameter"],
-        "Number of Cavities": ["cavity", "position", "way", "pin count", "terminal count"],
-        "Number of Rows": ["row", "grid", "arrangement", "layout"],
+        "Number Of Cavities": ["cavity", "position", "way", "pin count", "terminal count"],
+        "Number Of Rows": ["row", "grid", "arrangement", "layout"],
         "Mechanical Coding": ["coding", "keying", "polarization", "mechanical key"],
         "Colour": ["color", "colour", "black", "white", "red", "blue", "yellow"],
         "Colour Coding": ["color coding", "colour coding", "coded components"],
@@ -129,9 +129,9 @@ def create_enhanced_search_queries(attribute_key: str, base_query: str) -> list:
         "Contact Systems": ["contact system", "terminal system", "MQS", "MCP", "TAB", "MLK"],
         "Terminal Position Assurance": ["TPA", "terminal position assurance", "anti-backout"],
         "Connector Position Assurance": ["CPA", "connector position assurance", "secondary lock"],
-        "Name of Closed Cavities": ["closed cavity", "blocked position", "plugged cavity"],
+        "Name Of Closed Cavities": ["closed cavity", "blocked position", "plugged cavity"],
         "Pre-assembled": ["pre-assembled", "assembly", "disassembly", "delivered as"],
-        "Type of Connector": ["connector type", "standard", "antenna", "relay holder", "bulb holder"],
+        "Type Of Connector": ["connector type", "standard", "antenna", "relay holder", "bulb holder"],
         "Set/Kit": ["set", "kit", "accessories", "components"],
         "HV Qualified": ["HV", "high voltage", "voltage", "qualified", "certified"]
     }
@@ -811,7 +811,7 @@ def get_default_extraction_schema() -> Dict[str, Any]:
                 "type": "string", 
                 "description": "The main material name of the connector"
             },
-            "Pull-to-Seat": {
+            "Pull-To-Seat": {
                 "type": "string",
                 "description": "Pull-to-seat force or mechanism information"
             },
@@ -831,11 +831,11 @@ def get_default_extraction_schema() -> Dict[str, Any]:
                 "type": "string",
                 "description": "Width of the connector in millimeters"
             },
-            "Number of Cavities": {
+            "Number Of Cavities": {
                 "type": "string",
                 "description": "Number of cavities or positions in the connector"
             },
-            "Number of Rows": {
+            "Number Of Rows": {
                 "type": "string",
                 "description": "Number of rows in the connector"
             },
@@ -887,15 +887,15 @@ def get_default_extraction_schema() -> Dict[str, Any]:
                 "type": "string",
                 "description": "Connector position assurance information"
             },
-            "Closed Cavities": {
+            "Name Of Closed Cavities": {
                 "type": "string",
                 "description": "Information about closed cavities"
             },
-            "Pre-Assembled": {
+            "Pre-assembled": {
                 "type": "string",
                 "description": "Pre-assembly information"
             },
-            "Type of Connector": {
+            "Type Of Connector": {
                 "type": "string",
                 "description": "Type of connector"
             },
