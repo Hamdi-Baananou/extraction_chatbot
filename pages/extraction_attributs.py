@@ -25,6 +25,10 @@ import subprocess
 import nest_asyncio
 from typing import List
 import re
+from groq import Groq
+import requests
+from sentence_transformers import SentenceTransformer
+import config
 
 nest_asyncio.apply()
 
@@ -202,9 +206,143 @@ st.markdown(
         font-size: 0.9em;
         margin-bottom: 0.5rem;
     }
+    
+    /* Right pane styling */
+    .right-pane {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 3px solid #1e3c72;
+        border-radius: 0 15px 15px 0;
+        padding: 1.5rem;
+        box-shadow: -5px 0 15px rgba(30, 60, 114, 0.1);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    /* Chat container styling */
+    .chat-container {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        margin-bottom: 1rem;
+    }
+    
+    /* Chatbot styling */
+    .chat-container {
+        background: white;
+        border-radius: 15px;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .chat-message {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-left: 4px solid #1e3c72;
+    }
+    
+    .chat-message.user {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        margin-left: 2rem;
+    }
+    
+    .chat-message.assistant {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: #1e3c72;
+        margin-right: 2rem;
+    }
+    
+    .extraction-results {
+        background: white;
+        border-radius: 15px;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .result-item {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        transition: all 0.3s ease;
+    }
+    
+    .result-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.2);
+    }
+    
+    .result-label {
+        font-weight: 600;
+        color: #1e3c72;
+        margin-bottom: 0.5rem;
+    }
+    
+    .result-value {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.5rem;
+        font-weight: 500;
+    }
     </style>""",
     unsafe_allow_html=True
 )
+
+# --- Chatbot Functions ---
+def initialize_chatbot():
+    """Initialize chatbot components"""
+    try:
+        GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+        groq_client = Groq(api_key=GROQ_API_KEY)
+        return groq_client
+    except Exception as e:
+        st.error(f"Error initializing chatbot: {e}")
+        return None
+
+def get_chat_response(groq_client, user_message, extraction_data):
+    """Get response from Groq chatbot based on extraction data"""
+    try:
+        # Create context from extraction data
+        context = "Extracted data:\n"
+        if extraction_data:
+            for item in extraction_data:
+                if isinstance(item, dict):
+                    for key, value in item.items():
+                        if key not in ['Raw Output', 'Parse Error', 'Is Success', 'Is Error', 'Is Not Found', 'Is Rate Limit', 'Latency (s)', 'Exact Match', 'Case-Insensitive Match']:
+                            if value and value != 'NOT FOUND' and value != 'ERROR':
+                                context += f"{key}: {value}\n"
+        
+        if not context.strip() or context.strip() == "Extracted data:":
+            return "I don't have any extracted data to work with yet. Please complete the extraction process first."
+        
+        prompt = f"""You are a helpful assistant for LEONI parts data. You have access to the following extracted information:
+
+{context}
+
+User question: {user_message}
+
+Please provide a helpful and accurate response based on the extracted data. If the information is not available in the extracted data, please say so clearly. Be concise but informative."""
+        
+        response = groq_client.chat.completions.create(
+            model="qwen-qwq-32b",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        return f"Sorry, I encountered an error while processing your request. Please try again."
 
 # --- Navigation Sidebar ---
 with st.sidebar:
@@ -478,6 +616,14 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Blue band header with LEONI
+st.markdown("""
+    <div class="header-band">
+        <h1>LEOPARTS</h1>
+        <h2>LEONI</h2>
+    </div>
+""", unsafe_allow_html=True)
+
 st.markdown("### 📄 PDF Attribute Extraction")
 st.markdown("Upload your PDF documents and automatically extract key attributes.")
 
@@ -589,8 +735,15 @@ with st.sidebar:
         st.info("Upload and process PDF documents to view extracted data.")
 
 
-# --- Main Area for Displaying Extraction Results ---
-st.header("2. Extracted Information")
+# --- Main Layout with Two Columns ---
+# Initialize chatbot
+groq_client = initialize_chatbot()
+
+# Create two columns: left for extraction, right for results and chat
+left_col, right_col = st.columns([2, 1])
+
+with left_col:
+    st.header("2. Extracted Information")
 
 # --- Get current asyncio event loop --- 
 # Needed for both scraping and running the async extraction chain
@@ -1439,5 +1592,133 @@ else:
     # This logic might need review depending on how Stage 1/2 errors are handled
     elif (st.session_state.pdf_chain or st.session_state.web_chain) and st.session_state.extraction_performed:
         st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
+with right_col:
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                    color: white; 
+                    padding: 1rem; 
+                    border-radius: 15px; 
+                    text-align: center; 
+                    margin-bottom: 1rem;">
+            <h3 style="margin: 0; font-size: 1.5em;">📊 Extraction Results</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Display extraction results in a beautiful format
+    if st.session_state.evaluation_results:
+        st.markdown("""
+            <div class="extraction-results">
+        """, unsafe_allow_html=True)
+        
+        # Create a summary of extracted data
+        extracted_data = {}
+        for result in st.session_state.evaluation_results:
+            if isinstance(result, dict):
+                prompt_name = result.get('Prompt Name', 'Unknown')
+                extracted_value = result.get('Extracted Value', '')
+                if extracted_value and extracted_value != 'NOT FOUND' and extracted_value != 'ERROR':
+                    extracted_data[prompt_name] = extracted_value
+        
+        # Display each extracted item beautifully
+        for key, value in extracted_data.items():
+            # Truncate long values for better display
+            display_value = value[:100] + "..." if len(value) > 100 else value
+            st.markdown(f"""
+                <div class="result-item">
+                    <div class="result-label">🔍 {key}</div>
+                    <div class="result-value" title="{value}">{display_value}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Success metrics
+        if st.session_state.evaluation_metrics:
+            metrics = st.session_state.evaluation_metrics
+            st.markdown("""
+                <div style="background: white; border-radius: 15px; padding: 1rem; margin: 1rem 0; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);">
+                    <h4 style="color: #1e3c72; margin-bottom: 1rem;">📈 Success Metrics</h4>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                success_rate = metrics.get('success_rate', 0)
+                st.metric("Success Rate", f"{success_rate:.1%}")
+            with col2:
+                total_fields = metrics.get('total_fields', 0)
+                st.metric("Total Fields", total_fields)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("📄 Upload and process documents to see extracted results here.")
+    
+    # Chatbot Section
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                    color: white; 
+                    padding: 1rem; 
+                    border-radius: 15px; 
+                    text-align: center; 
+                    margin: 2rem 0 1rem 0;">
+            <h3 style="margin: 0; font-size: 1.5em;">💬 Chat with Your Data</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Initialize chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Display chat history
+    if st.session_state.chat_history:
+        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+        for message in st.session_state.chat_history:
+            if message['role'] == 'user':
+                st.markdown(f"""
+                    <div class="chat-message user">
+                        <strong>You:</strong> {message['content']}
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div class="chat-message assistant">
+                        <strong>Assistant:</strong> {message['content']}
+                    </div>
+                """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Chat input
+    if groq_client and st.session_state.evaluation_results:
+        user_message = st.text_input("Ask about your extracted data:", key="chat_input", placeholder="e.g., What is the part number?")
+        
+        if st.button("Send", key="send_chat"):
+            if user_message.strip():
+                # Add user message to history
+                st.session_state.chat_history.append({
+                    'role': 'user',
+                    'content': user_message
+                })
+                
+                # Get response from chatbot
+                with st.spinner("Thinking..."):
+                    response = get_chat_response(groq_client, user_message, st.session_state.evaluation_results)
+                
+                # Add assistant response to history
+                st.session_state.chat_history.append({
+                    'role': 'assistant',
+                    'content': response
+                })
+                
+                # Clear input and rerun to show new messages
+                st.rerun()
+    elif not groq_client:
+        st.warning("⚠️ Chatbot not available - API key missing")
+    elif not st.session_state.evaluation_results:
+        st.info("💬 Chat will be available once you extract data")
+    
+    # Clear chat button
+    if st.session_state.chat_history:
+        if st.button("🗑️ Clear Chat History", key="clear_chat"):
+            st.session_state.chat_history = []
+            st.rerun()
     
 
