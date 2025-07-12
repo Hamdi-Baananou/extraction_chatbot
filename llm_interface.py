@@ -757,42 +757,40 @@ async def extract_with_numind_from_bytes(client, file_bytes: bytes, attribute_ke
 
 async def extract_with_numind_using_schema(client, file_bytes: bytes, extraction_schema: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
-    Extract using NuMind API with a specific extraction schema.
-    This allows you to use the exact same schema as your NuMind playground.
+    Extract using NuMind API. The extraction template should be configured in the NuMind project.
     
     Args:
         client: NuMind client instance
         file_bytes: File content as bytes
-        extraction_schema: The extraction schema to use (from your NuMind playground)
+        extraction_schema: The extraction schema (for reference, but not passed to API)
         
     Returns:
         Dictionary with extraction result or None if failed
     """
-    if not client or not file_bytes or not extraction_schema:
-        logger.warning("NuMind extraction skipped: missing client, file_bytes, or extraction_schema")
+    if not client or not file_bytes:
+        logger.warning("NuMind extraction skipped: missing client or file_bytes")
         return None
         
     try:
-        logger.info(f"Starting NuMind extraction with custom schema from file bytes (size: {len(file_bytes)})")
+        logger.info(f"Starting NuMind extraction from file bytes (size: {len(file_bytes)})")
         
-        # Call the NuMind API with the specific extraction schema
+        # Call the NuMind API - it uses the extraction template configured in the project
         output_schema = client.post_api_projects_projectid_extract(
             NUMIND_PROJECT_ID, 
-            file_bytes,
-            extraction_schema=extraction_schema
+            file_bytes
         )
         
         if output_schema and hasattr(output_schema, 'model_dump'):
             result = output_schema.model_dump()
-            logger.success("NuMind extraction with custom schema completed")
+            logger.success("NuMind extraction completed")
             logger.debug(f"NuMind result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
             return result
         else:
-            logger.warning("NuMind extraction with custom schema returned invalid result")
+            logger.warning("NuMind extraction returned invalid result")
             return None
             
     except Exception as e:
-        logger.error(f"NuMind extraction with custom schema failed: {e}")
+        logger.error(f"NuMind extraction failed: {e}")
         return None
 
 def get_default_extraction_schema() -> Dict[str, Any]:
@@ -916,6 +914,7 @@ def get_default_extraction_schema() -> Dict[str, Any]:
 def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any], attribute_key: str) -> Optional[str]:
     """
     Extract a specific attribute value from NuMind extraction result.
+    Based on the NuMind API response structure.
     
     Args:
         numind_result: The result dictionary from NuMind extraction
@@ -929,7 +928,38 @@ def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any],
         return None
         
     try:
-        # Try to get the value directly from the result
+        # NuMind response structure: result -> schemas -> attribute_name -> value
+        if 'result' in numind_result and 'schemas' in numind_result['result']:
+            schemas = numind_result['result']['schemas']
+            
+            if attribute_key in schemas:
+                schema_data = schemas[attribute_key]
+                
+                # Handle different schema types based on NuMind structure
+                if isinstance(schema_data, dict):
+                    # String value
+                    if 'value' in schema_data:
+                        return str(schema_data['value']).strip()
+                    # Array of values
+                    elif 'values' in schema_data and isinstance(schema_data['values'], list):
+                        # Return the first value or join multiple values
+                        values = [str(v.get('value', v)) for v in schema_data['values'] if v]
+                        return ', '.join(values) if values else None
+                    # Boolean value
+                    elif 'value' in schema_data and isinstance(schema_data['value'], bool):
+                        return str(schema_data['value'])
+                    # Number value
+                    elif 'value' in schema_data and isinstance(schema_data['value'], (int, float)):
+                        return str(schema_data['value'])
+                
+                # Direct string value
+                elif isinstance(schema_data, str):
+                    return schema_data.strip()
+                # Direct number value
+                elif isinstance(schema_data, (int, float)):
+                    return str(schema_data)
+        
+        # Fallback: try to get the value directly from the result
         if attribute_key in numind_result:
             value = numind_result[attribute_key]
             if value is not None:

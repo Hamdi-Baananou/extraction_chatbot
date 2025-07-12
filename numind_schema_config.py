@@ -10,7 +10,7 @@ To get your schema from NuMind playground:
 3. Copy it here and replace the default schema below
 """
 
-# Replace this with your actual NuMind extraction schema from your playground
+# Your exact NuMind template converted to JSON schema format
 CUSTOM_EXTRACTION_SCHEMA = {
     "type": "object",
     "properties": {
