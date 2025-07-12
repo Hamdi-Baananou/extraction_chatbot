@@ -17,6 +17,7 @@ pysqlite3-binary # Required by chromadb on Streamlit Cloud for sqlite3 version >
 # faiss-cpu # Optional alternative vector store
 crawl4ai # Add crawl4ai for web scraping
 beautifulsoup4 # Add beautifulsoup4 for HTML cleaning
+numind # Add NuMind SDK for structured extraction
 
 numpy~=1.26.0 # <-- Pin numpy version explicitly
 

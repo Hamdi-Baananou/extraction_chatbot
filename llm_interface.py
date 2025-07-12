@@ -679,6 +679,151 @@ Output:
     return web_chain
 
 
+# --- NuMind Integration for Structured Extraction ---
+import os
+from typing import Dict, Any, Optional
+
+# NuMind configuration
+NUMIND_API_KEY = os.getenv("NUMIND_API_KEY", "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJkVWRIUGZnUlk3NzBiMHNvZlRFUWlWU2MyMW9kRENRbmcxZE5ZZjR2b1dBIn0.eyJleHAiOjE3ODM2MjA5NTksImlhdCI6MTc1MjA5MDU0MiwiYXV0aF90aW1lIjoxNzUyMDg0OTU5LCJqdGkiOiJiNzIzYzc1MS00MWUyLTRmNTMtODYzMC1kNjU3NzE1YzMxMGEiLCJpc3MiOiJodHRwczovL3VzZXJzLm51bWluZC5haS9yZWFsbXMvZXh0cmFjdC1wbGF0Zm9ybSIsImF1ZCI6WyJhY2NvdW50IiwiYXBpIl0sInN1YiI6IjNlOTEyNTlhLWVkZGEtNDc0YS04ZWZhLWZlOWMzYzg2NjcxOSIsInR5cCI6IkJlYXJlciIsImF6cCI6InVzZXIiLCJzaWQiOiIwOTA3NDE5ZC1lM2Y1LTRlOTctOWMxZi00ZmVlMGE4M2Q5MjUiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1leHRyYWN0LXBsYXRmb3JtIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJvcmdhbml6YXRpb25zIjp7fSwibmFtZSI6IkhhbWRpIEJhYW5hbm91IiwiY2xpZW50IjoiYXBpIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmFhbmFub3Vjb250YWN0QGdtYWlsLmNvbSIsImdpdmVuX25hbWUiOiJIYW1kaSIsImZhbWlseV9uYW1lIjoiQmFhbmFub3UiLCJlbWFpbCI6ImJhYW5hbm91Y29udGFjdEBnbWFpbC5jb20ifQ.DSAc5gkuzR8Kip40QFA32pVRYfmn7dzCNHcEZUIryI5n1z2U5m5gQ70qRH4brwgwuzEiUnn3TgJ0gALAbjNRU1V4K-KICPBny_eNmm2UhQBEUHqUqyjPbIjYZD6K4-gcBbdMoZzSNpFaSmYfZBK1xt4QDmXrKkLhumm8cJ5P_sphtRpYHhQ6CmAorfRQ4Bzg2jaYc20Pu4-Vqn2uxtGEG_KOW2wkwUPcDfGY0cx1H5oTFk7P4o1u6w8tzvMcjgf510cTgyk0rtYnPY8UguORuoY35D0cCTygWUhXZSHkEOSsSEs8MlR6wXn5EQ_4Ht1ZM5vjFRfWOdJO4zP0pd6Yxw")
+NUMIND_PROJECT_ID = os.getenv("NUMIND_PROJECT_ID", "dab6080e-5409-43b0-8f02-7a844ba933d5")
+
+def create_numind_extraction_chain():
+    """
+    Creates a NuMind extraction chain for structured data extraction.
+    Returns the NuMind client if properly configured, None otherwise.
+    """
+    try:
+        from numind import NuMind
+        
+        if not NUMIND_API_KEY or not NUMIND_PROJECT_ID:
+            logger.warning("NuMind API key or project ID not configured. NuMind extraction will be disabled.")
+            return None
+            
+        client = NuMind(api_key=NUMIND_API_KEY)
+        logger.info("NuMind extraction chain created successfully.")
+        return client
+        
+    except ImportError:
+        logger.warning("NuMind SDK not installed. Install with: pip install numind")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to initialize NuMind client: {e}")
+        return None
+
+async def extract_with_numind(client, file_path: str, attribute_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract specific attribute using NuMind API.
+    
+    Args:
+        client: NuMind client instance
+        file_path: Path to the PDF file to extract from
+        attribute_key: The attribute key to extract
+        
+    Returns:
+        Dictionary with extraction result or None if failed
+    """
+    if not client or not file_path or not attribute_key:
+        logger.warning("NuMind extraction skipped: missing client, file_path, or attribute_key")
+        return None
+        
+    try:
+        logger.info(f"Starting NuMind extraction for attribute '{attribute_key}' from file: {file_path}")
+        
+        # Read the file as bytes
+        with open(file_path, "rb") as file:
+            input_file = file.read()
+        
+        # Call the NuMind API
+        output_schema = client.post_api_projects_projectid_extract(NUMIND_PROJECT_ID, input_file)
+        
+        if output_schema and hasattr(output_schema, 'model_dump'):
+            result = output_schema.model_dump()
+            logger.success(f"NuMind extraction completed for '{attribute_key}'")
+            return result
+        else:
+            logger.warning(f"NuMind extraction returned invalid result for '{attribute_key}'")
+            return None
+            
+    except Exception as e:
+        logger.error(f"NuMind extraction failed for '{attribute_key}': {e}")
+        return None
+
+async def extract_with_numind_from_bytes(client, file_bytes: bytes, attribute_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract specific attribute using NuMind API with file bytes.
+    
+    Args:
+        client: NuMind client instance
+        file_bytes: File content as bytes
+        attribute_key: The attribute key to extract
+        
+    Returns:
+        Dictionary with extraction result or None if failed
+    """
+    if not client or not file_bytes or not attribute_key:
+        logger.warning("NuMind extraction skipped: missing client, file_bytes, or attribute_key")
+        return None
+        
+    try:
+        logger.info(f"Starting NuMind extraction for attribute '{attribute_key}' from file bytes (size: {len(file_bytes)})")
+        
+        # Call the NuMind API directly with file bytes
+        output_schema = client.post_api_projects_projectid_extract(NUMIND_PROJECT_ID, file_bytes)
+        
+        if output_schema and hasattr(output_schema, 'model_dump'):
+            result = output_schema.model_dump()
+            logger.success(f"NuMind extraction completed for '{attribute_key}'")
+            return result
+        else:
+            logger.warning(f"NuMind extraction returned invalid result for '{attribute_key}'")
+            return None
+            
+    except Exception as e:
+        logger.error(f"NuMind extraction failed for '{attribute_key}': {e}")
+        return None
+
+def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any], attribute_key: str) -> Optional[str]:
+    """
+    Extract a specific attribute value from NuMind result.
+    
+    Args:
+        numind_result: The result dictionary from NuMind extraction
+        attribute_key: The specific attribute key to extract
+        
+    Returns:
+        The extracted value as string, or None if not found
+    """
+    if not numind_result or not attribute_key:
+        return None
+        
+    try:
+        # Navigate through the NuMind result structure to find the attribute
+        # The exact structure depends on your NuMind project configuration
+        # This is a generic approach - you may need to adjust based on your schema
+        
+        # Try direct key access first
+        if attribute_key in numind_result:
+            value = numind_result[attribute_key]
+            return str(value) if value is not None else None
+            
+        # Try nested access (common in structured extraction)
+        for key, value in numind_result.items():
+            if isinstance(value, dict) and attribute_key in value:
+                nested_value = value[attribute_key]
+                return str(nested_value) if nested_value is not None else None
+                
+        # Try case-insensitive search
+        for key, value in numind_result.items():
+            if key.lower() == attribute_key.lower():
+                return str(value) if value is not None else None
+                
+        logger.warning(f"Attribute '{attribute_key}' not found in NuMind result")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error extracting attribute '{attribute_key}' from NuMind result: {e}")
+        return None
+
 # --- Helper function to invoke chain and process response (KEEP THIS) ---
 async def _invoke_chain_and_process(chain, input_data, attribute_key):
     """Helper to invoke chain, handle errors, and clean response."""

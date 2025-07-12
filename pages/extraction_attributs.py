@@ -274,7 +274,11 @@ from llm_interface import (
     create_pdf_extraction_chain,
     create_web_extraction_chain,
     _invoke_chain_and_process,
-    scrape_website_table_html
+    scrape_website_table_html,
+    create_numind_extraction_chain,
+    extract_with_numind,
+    extract_with_numind_from_bytes,
+    extract_specific_attribute_from_numind_result
 )
 # Import the prompts
 from extraction_prompts import (
@@ -389,6 +393,8 @@ if 'pdf_chain' not in st.session_state:
     st.session_state.pdf_chain = None
 if 'web_chain' not in st.session_state:
     st.session_state.web_chain = None
+if 'numind_chain' not in st.session_state:
+    st.session_state.numind_chain = None
 if 'processed_files' not in st.session_state:
     st.session_state.processed_files = []
 if 'evaluation_results' not in st.session_state:
@@ -405,6 +411,8 @@ if 'current_part_number_scraped' not in st.session_state:
     st.session_state.current_part_number_scraped = None
 if 'processed_documents' not in st.session_state:
     st.session_state.processed_documents = []
+if 'uploaded_file_data' not in st.session_state:
+    st.session_state.uploaded_file_data = []
 
 def reset_evaluation_state():
     """Reset all evaluation-related session state variables."""
@@ -414,6 +422,7 @@ def reset_evaluation_state():
     st.session_state.scraped_table_html_cache = None
     st.session_state.current_part_number_scraped = None
     st.session_state.processed_documents = []
+    st.session_state.uploaded_file_data = []
 
 # --- Global Variables / Initialization ---
 @st.cache_resource
@@ -502,6 +511,8 @@ with st.sidebar:
             reset_evaluation_state() # Reset evaluation results AND extraction flag
 
             filenames = [f.name for f in uploaded_files]
+            # Store uploaded file data for NuMind extraction
+            st.session_state.uploaded_file_data = [(f.name, f.getvalue()) for f in uploaded_files]
             logger.info(f"Starting processing for {len(filenames)} files: {', '.join(filenames)}")
             # --- PDF Processing ---
             with st.spinner("Processing PDFs... Loading, cleaning, splitting..."):
@@ -541,10 +552,11 @@ with st.sidebar:
                             st.session_state.processed_files = filenames # Update list
                             st.session_state.processed_documents = processed_docs # Store the Mistral-extracted documents
                             logger.success("Vector store setup complete. Retriever is ready.")
-                            # --- Create BOTH Extraction Chains --- 
+                            # --- Create Extraction Chains --- 
                             with st.spinner("Preparing extraction engines..."):
                                  st.session_state.pdf_chain = create_pdf_extraction_chain(st.session_state.retriever, llm)
                                  st.session_state.web_chain = create_web_extraction_chain(llm)
+                                 st.session_state.numind_chain = create_numind_extraction_chain()
                             if st.session_state.pdf_chain and st.session_state.web_chain:
                                 logger.success("Extraction chains created.")
                                 # Keep extraction_performed as False here, it will run in the main section
@@ -963,217 +975,237 @@ else:
                     'Case-Insensitive Match': None
                 }
 
-        # --- Stage 2: PDF Fallback --- 
-        st.info(f"Running Stage 2 (PDF Fallback) for {len(pdf_fallback_needed)} attributes...")
-        debug_logger.info("Starting Stage 2 (PDF Fallback)", data={
+        # --- Stage 2: NuMind Fallback --- 
+        st.info(f"Running Stage 2 (NuMind Fallback) for {len(pdf_fallback_needed)} attributes...")
+        debug_logger.info("Starting Stage 2 (NuMind Fallback)", data={
             "fallback_count": len(pdf_fallback_needed),
             "fallback_attributes": pdf_fallback_needed
         }, context={"step": "stage2_start"})
         
         col_index = 0 # Reset column index
-        SLEEP_INTERVAL_SECONDS = 0.5 # Potentially longer delay for more complex chain
+        SLEEP_INTERVAL_SECONDS = 0.5 # Potentially longer delay for NuMind API calls
 
         if not pdf_fallback_needed:
             st.success("Stage 1 extraction successful for all attributes from web data.")
-            debug_logger.info("No PDF fallback needed", data={
+            debug_logger.info("No NuMind fallback needed", data={
                 "reason": "All attributes successful in Stage 1"
             }, context={"step": "stage2_skipped_all_successful"})
         else:
-            for prompt_name in pdf_fallback_needed:
-                attribute_key = prompt_name
-                pdf_instruction = prompts_to_run[attribute_key]["pdf"] # Get specific PDF instruction
-                current_col = cols[col_index % 2]
-                col_index += 1
-                json_result_str = None
-                run_time = 0.0
-                source = "PDF" # Source for this stage
+            # Check if NuMind is available
+            if not st.session_state.numind_chain:
+                st.warning("NuMind extraction not available. Falling back to PDF extraction.")
+                debug_logger.warning("NuMind not available, using PDF fallback", context={"step": "stage2_numind_unavailable"})
                 
-                debug_logger.info(f"Processing PDF fallback for: {attribute_key}", data={
-                    "attribute": attribute_key,
-                    "source": source,
-                    "instruction_length": len(pdf_instruction)
-                }, context={"step": "stage2_attribute_start", "attribute": attribute_key})
+                # Fallback to original PDF extraction logic
+                for prompt_name in pdf_fallback_needed:
+                    attribute_key = prompt_name
+                    pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+                    current_col = cols[col_index % 2]
+                    col_index += 1
+                    json_result_str = None
+                    run_time = 0.0
+                    source = "PDF"
+                    
+                    with current_col:
+                        with st.spinner(f"Stage 2: Extracting {attribute_key} from PDF Data..."):
+                            try:
+                                start_time = time.time()
+                                context_chunks = fetch_chunks(
+                                    st.session_state.retriever,
+                                    part_number,
+                                    attribute_key,
+                                    k=8
+                                )
+                                context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                                
+                                pdf_input = {
+                                    "context": context_text,
+                                    "extraction_instructions": pdf_instruction,
+                                    "attribute_key": attribute_key,
+                                    "part_number": part_number if part_number else "Not Provided"
+                                }
+                                
+                                json_result_str = loop.run_until_complete(
+                                    _invoke_chain_and_process(st.session_state.pdf_chain, pdf_input, f"{attribute_key} (PDF)")
+                                )
+                                run_time = time.time() - start_time
+                                time.sleep(SLEEP_INTERVAL_SECONDS)
+                            except Exception as e:
+                                logger.error(f"Error during Stage 2 (PDF) call for '{attribute_key}': {e}", exc_info=True)
+                                json_result_str = f'{{"error": "Exception during Stage 2 call: {e}"}}'
+                                run_time = time.time() - start_time
+                    
+                    # Parse PDF result (same logic as before)
+                    final_answer_value = "Error"
+                    parse_error = None
+                    is_rate_limit = False
+                    raw_output = json_result_str if json_result_str else '{"error": "Stage 2 did not run"}'
+                    
+                    try:
+                        string_to_parse = raw_output.strip()
+                        parsed_json = extract_json_from_string(string_to_parse)
+                        
+                        if isinstance(parsed_json, dict) and attribute_key in parsed_json:
+                            final_answer_value = str(parsed_json[attribute_key])
+                        elif isinstance(parsed_json, dict) and "error" in parsed_json:
+                            final_answer_value = f"Error: {parsed_json['error'][:100]}"
+                            parse_error = ValueError(f"Stage 2 Error: {parsed_json['error']}")
+                        else:
+                            final_answer_value = "Unexpected JSON Format"
+                            parse_error = ValueError(f"Stage 2 Unexpected JSON format")
+                    except Exception as processing_exc:
+                        parse_error = processing_exc
+                        final_answer_value = "Processing Error"
+                    
+                    # Update results
+                    is_error = bool(parse_error) and not is_rate_limit
+                    is_not_found_stage2 = "not found" in final_answer_value.lower() or final_answer_value.strip() == ""
+                    is_success_stage2 = not is_error and not is_not_found_stage2 and not is_rate_limit
+                    
+                    stage1_latency = intermediate_results[prompt_name].get('Latency (s)', 0.0)
+                    total_latency = stage1_latency + round(run_time, 2)
+                    
+                    intermediate_results[prompt_name].update({
+                        'Extracted Value': final_answer_value,
+                        'Source': source,
+                        'Raw Output': raw_output,
+                        'Parse Error': str(parse_error) if parse_error else None,
+                        'Is Success': is_success_stage2,
+                        'Is Error': is_error,
+                        'Is Not Found': is_not_found_stage2,
+                        'Is Rate Limit': is_rate_limit,
+                        'Latency (s)': total_latency 
+                    })
+            else:
+                # Use NuMind extraction
+                st.success("Using NuMind for structured extraction...")
                 
-                with current_col:
-                     with st.spinner(f"Stage 2: Extracting {attribute_key} from PDF Data..."):
+                # Get the first uploaded file data for NuMind extraction
+                file_data = None
+                if st.session_state.uploaded_file_data and len(st.session_state.uploaded_file_data) > 0:
+                    # Use the first file for extraction
+                    file_name, file_bytes = st.session_state.uploaded_file_data[0]
+                    file_data = file_bytes
+                
+                if not file_data:
+                    st.error("No file data available for NuMind extraction.")
+                    debug_logger.error("No file data for NuMind", context={"step": "stage2_no_file_data"})
+                else:
+                    # Run NuMind extraction once for all attributes
+                    with st.spinner("Running NuMind structured extraction..."):
                         try:
                             start_time = time.time()
-                            # --- Tag-aware context retrieval ---
-                            debug_logger.info(f"Fetching context chunks for {attribute_key}", data={
-                                "part_number": part_number,
-                                "attribute": attribute_key,
-                                "k": 8
-                            }, context={"step": "stage2_context_retrieval", "attribute": attribute_key})
                             
-                            context_chunks = fetch_chunks(
-                                st.session_state.retriever,
-                                part_number,
-                                attribute_key,
-                                k=8
-                            )
-                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                            debug_logger.info("Starting NuMind extraction", data={
+                                "file_name": st.session_state.uploaded_file_data[0][0] if st.session_state.uploaded_file_data else "Unknown",
+                                "file_size": len(file_data),
+                                "attributes_count": len(pdf_fallback_needed)
+                            }, context={"step": "stage2_numind_start"})
                             
-                            debug_logger.info(f"Context retrieved for {attribute_key}", data={
-                                "chunk_count": len(context_chunks) if context_chunks else 0,
-                                "context_length": len(context_text),
-                                "context_preview": context_text[:500]
-                            }, context={"step": "stage2_context_retrieved", "attribute": attribute_key})
-                            
-                            logger.debug(f"Context for '{attribute_key}' (part {part_number}): {context_text[:500]}")
-                            pdf_input = {
-                                "context": context_text,
-                                "extraction_instructions": pdf_instruction,
-                                "attribute_key": attribute_key,
-                                "part_number": part_number if part_number else "Not Provided"
-                            }
-                            
-                            debug_logger.llm_request(
-                                f"Extract {attribute_key} from PDF context",
-                                "pdf_chain",
-                                0.7,
-                                1000,
-                                context={"step": "stage2_llm_request", "attribute": attribute_key}
+                            # Run NuMind extraction with file data
+                            numind_result = loop.run_until_complete(
+                                extract_with_numind_from_bytes(st.session_state.numind_chain, file_data, "all_attributes")
                             )
                             
-                            # Call helper using the pdf_chain
-                            json_result_str = loop.run_until_complete(
-                                _invoke_chain_and_process(st.session_state.pdf_chain, pdf_input, f"{attribute_key} (PDF)")
-                            )
                             run_time = time.time() - start_time
                             
-                            debug_logger.llm_response(
-                                "pdf_chain",
-                                json_result_str if json_result_str else "",
-                                len(json_result_str) if json_result_str else 0,
-                                run_time,
-                                context={"step": "stage2_llm_response", "attribute": attribute_key}
-                            )
+                            debug_logger.info("NuMind extraction completed", data={
+                                "duration": run_time,
+                                "result_keys": list(numind_result.keys()) if numind_result else []
+                            }, context={"step": "stage2_numind_complete"})
                             
-                            logger.info(f"Stage 2 (PDF) for '{attribute_key}' took {run_time:.2f} seconds.")
-                            time.sleep(SLEEP_INTERVAL_SECONDS) # Add delay
+                            if numind_result:
+                                st.success(f"NuMind extraction completed in {run_time:.2f} seconds.")
+                                
+                                # Process each attribute from NuMind result
+                                for prompt_name in pdf_fallback_needed:
+                                    attribute_key = prompt_name
+                                    current_col = cols[col_index % 2]
+                                    col_index += 1
+                                    source = "NuMind"
+                                    
+                                    debug_logger.info(f"Processing NuMind result for: {attribute_key}", context={"step": "stage2_numind_attribute", "attribute": attribute_key})
+                                    
+                                    # Extract specific attribute from NuMind result
+                                    final_answer_value = extract_specific_attribute_from_numind_result(numind_result, attribute_key)
+                                    
+                                    if final_answer_value is None:
+                                        final_answer_value = "NOT FOUND"
+                                        is_success_stage2 = False
+                                        is_error = False
+                                        is_not_found_stage2 = True
+                                        parse_error = None
+                                    else:
+                                        is_success_stage2 = True
+                                        is_error = False
+                                        is_not_found_stage2 = False
+                                        parse_error = None
+                                    
+                                    # Update results
+                                    stage1_latency = intermediate_results[prompt_name].get('Latency (s)', 0.0)
+                                    total_latency = stage1_latency + round(run_time, 2)
+                                    
+                                    intermediate_results[prompt_name].update({
+                                        'Extracted Value': final_answer_value,
+                                        'Source': source,
+                                        'Raw Output': json.dumps(numind_result) if numind_result else "No NuMind result",
+                                        'Parse Error': None,
+                                        'Is Success': is_success_stage2,
+                                        'Is Error': is_error,
+                                        'Is Not Found': is_not_found_stage2,
+                                        'Is Rate Limit': False,
+                                        'Latency (s)': total_latency 
+                                    })
+                                    
+                                    debug_logger.info(f"NuMind result stored for {attribute_key}", data={
+                                        "final_value": final_answer_value,
+                                        "success": is_success_stage2,
+                                        "error": is_error,
+                                        "not_found": is_not_found_stage2,
+                                        "total_latency": total_latency
+                                    }, context={"step": "stage2_numind_result_stored", "attribute": attribute_key})
+                                    
+                                    logger.info(f"Updated result for '{prompt_name}' with NuMind data.")
+                            else:
+                                st.error("NuMind extraction failed. No results returned.")
+                                debug_logger.error("NuMind extraction failed", context={"step": "stage2_numind_failed"})
+                                
+                                # Mark all attributes as failed
+                                for prompt_name in pdf_fallback_needed:
+                                    intermediate_results[prompt_name].update({
+                                        'Extracted Value': "NuMind Extraction Failed",
+                                        'Source': "NuMind",
+                                        'Raw Output': "NuMind API returned no results",
+                                        'Parse Error': "NuMind extraction failed",
+                                        'Is Success': False,
+                                        'Is Error': True,
+                                        'Is Not Found': False,
+                                        'Is Rate Limit': False,
+                                        'Latency (s)': round(run_time, 2)
+                                    })
+                                
                         except Exception as e:
-                             logger.error(f"Error during Stage 2 (PDF) call for '{attribute_key}': {e}", exc_info=True)
-                             json_result_str = f'{{"error": "Exception during Stage 2 call: {e}"}}'
-                             run_time = time.time() - start_time
-                             
-                             debug_logger.exception(e, context={
-                                 "step": "stage2_exception",
-                                 "attribute": attribute_key,
-                                 "duration": run_time
-                             })
-                
-                # --- Basic Parsing of Stage 2 Result --- 
-                final_answer_value = "Error"
-                parse_error = None
-                is_rate_limit = False
-                llm_returned_error_msg = None
-                raw_output = json_result_str if json_result_str else '{"error": "Stage 2 did not run"}'
-                
-                debug_logger.info(f"Raw output for {attribute_key} (PDF)", data={
-                    "raw_output": json_result_str,
-                    "output_length": len(json_result_str) if json_result_str else 0
-                }, context={"step": "stage2_raw_output", "attribute": attribute_key})
-                
-                try:
-                    string_to_parse = raw_output.strip()
-                    parsed_json = extract_json_from_string(string_to_parse)
-                    
-                    debug_logger.data_transformation(
-                        f"JSON parsing for {attribute_key} (PDF)",
-                        string_to_parse,
-                        parsed_json,
-                        context={"step": "stage2_json_parsing", "attribute": attribute_key}
-                    )
-                    
-                    if not isinstance(parsed_json, dict):
-                        logger.error(f"Stage 2: Parsed JSON is not a dict for '{attribute_key}'. Got: {parsed_json}. Raw: {string_to_parse}")
-                        final_answer_value = "Unexpected JSON Type"
-                        parse_error = TypeError(f"Stage 2 Expected dict, got {type(parsed_json)}")
-                        logger.warning(f"Stage 2 Unexpected JSON type for '{attribute_key}'.")
-                        debug_logger.warning(f"Unexpected JSON type for {attribute_key} (PDF)", data={
-                            "expected": "dict",
-                            "got": type(parsed_json).__name__,
-                            "parsed_value": parsed_json
-                        }, context={"step": "stage2_parse_error", "attribute": attribute_key})
-                    elif attribute_key in parsed_json:
-                        final_answer_value = str(parsed_json[attribute_key]) # Store final PDF result
-                        logger.success(f"Stage 2 successful for '{attribute_key}' from PDF data.")
-                        debug_logger.extraction_step(
-                            attribute_key,
-                            source,
-                            pdf_input,
-                            final_answer_value,
-                            True,
-                            context={"step": "stage2_success", "attribute": attribute_key}
-                        )
-                    elif "error" in parsed_json:
-                        error_msg = parsed_json['error']
-                        llm_returned_error_msg = error_msg
-                        if "rate limit" in error_msg.lower():
-                            final_answer_value = "Rate Limit Hit"
-                            is_rate_limit = True
-                            parse_error = ValueError("Rate limit hit (PDF)")
-                            debug_logger.warning(f"Rate limit hit for {attribute_key} (PDF)", data={
-                                "error_msg": error_msg
-                            }, context={"step": "stage2_rate_limit", "attribute": attribute_key})
-                        else:
-                            final_answer_value = f"Error: {error_msg[:100]}"
-                            parse_error = ValueError(f"Stage 2 Error: {error_msg}")
-                            debug_logger.warning(f"LLM error for {attribute_key} (PDF)", data={
-                                "error_msg": error_msg
-                            }, context={"step": "stage2_llm_error", "attribute": attribute_key})
-                        logger.warning(f"Stage 2 Error for '{attribute_key}' from PDF. Error: {error_msg}")
-                    else:
-                        final_answer_value = "Unexpected JSON Format"
-                        parse_error = ValueError(f"Stage 2 Unexpected JSON keys: {list(parsed_json.keys())}")
-                        logger.warning(f"Stage 2 Unexpected JSON for '{attribute_key}'.")
-                        debug_logger.warning(f"Unexpected JSON format for {attribute_key} (PDF)", data={
-                            "found_keys": list(parsed_json.keys()),
-                            "expected_key": attribute_key
-                        }, context={"step": "stage2_unexpected_format", "attribute": attribute_key})
-                except Exception as processing_exc:
-                    parse_error = processing_exc
-                    final_answer_value = "Processing Error"
-                    logger.error(f"Error processing Stage 2 result for '{attribute_key}'. Error: {processing_exc}. Raw: {string_to_parse}")
-                    debug_logger.exception(processing_exc, context={
-                        "step": "stage2_processing_exception",
-                        "attribute": attribute_key,
-                        "raw_output": string_to_parse
-                    })
-
-                # --- Update the result in intermediate_results with Stage 2 data --- 
-                is_error = bool(parse_error) and not is_rate_limit
-                is_not_found_stage2 = "not found" in final_answer_value.lower() or final_answer_value.strip() == ""
-                is_success_stage2 = not is_error and not is_not_found_stage2 and not is_rate_limit
-                
-                # Add Stage 2 latency to existing Stage 1 latency if Stage 1 ran
-                stage1_latency = intermediate_results[prompt_name].get('Latency (s)', 0.0)
-                total_latency = stage1_latency + round(run_time, 2)
-                
-                intermediate_results[prompt_name].update({
-                    'Extracted Value': final_answer_value, # OVERWRITE with Stage 2 value/error
-                    'Source': source, # Update source to PDF
-                    'Raw Output': raw_output, # Store Stage 2 raw output
-                    'Parse Error': str(parse_error) if parse_error else None,
-                    'Is Success': is_success_stage2,
-                    'Is Error': is_error,
-                    'Is Not Found': is_not_found_stage2,
-                    'Is Rate Limit': is_rate_limit,
-                    'Latency (s)': total_latency 
-                })
-                
-                debug_logger.info(f"Stage 2 result stored for {attribute_key}", data={
-                    "final_value": final_answer_value,
-                    "success": is_success_stage2,
-                    "error": is_error,
-                    "not_found": is_not_found_stage2,
-                    "rate_limit": is_rate_limit,
-                    "stage1_latency": stage1_latency,
-                    "stage2_latency": round(run_time, 2),
-                    "total_latency": total_latency
-                }, context={"step": "stage2_result_stored", "attribute": attribute_key})
-                
-                logger.info(f"Updated result for '{prompt_name}' with PDF fallback data.")
+                            logger.error(f"Error during NuMind extraction: {e}", exc_info=True)
+                            st.error(f"NuMind extraction failed: {e}")
+                            
+                            debug_logger.exception(e, context={
+                                "step": "stage2_numind_exception",
+                                "duration": time.time() - start_time
+                            })
+                            
+                            # Mark all attributes as failed
+                            for prompt_name in pdf_fallback_needed:
+                                intermediate_results[prompt_name].update({
+                                    'Extracted Value': f"NuMind Error: {str(e)[:100]}",
+                                    'Source': "NuMind",
+                                    'Raw Output': f"Exception: {e}",
+                                    'Parse Error': str(e),
+                                    'Is Success': False,
+                                    'Is Error': True,
+                                    'Is Not Found': False,
+                                    'Is Rate Limit': False,
+                                    'Latency (s)': round(time.time() - start_time, 2)
+                                })
 
         # --- Final Processing --- 
         # Convert intermediate_results dict to list
@@ -1197,7 +1229,7 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter on success
             logger.info("Extraction completed successfully, setting extraction_performed=True")
-            st.success("Extraction complete (using Web data where possible, falling back to PDF). Enter ground truth below.")
+            st.success("Extraction complete (using Web data where possible, falling back to NuMind). Enter ground truth below.")
             
             debug_logger.session_state("evaluation_results", extraction_results_list, context={"step": "results_stored"})
             debug_logger.session_state("extraction_performed", True, context={"step": "extraction_flag_set"})
