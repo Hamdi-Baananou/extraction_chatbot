@@ -913,6 +913,42 @@ def get_default_extraction_schema() -> Dict[str, Any]:
         "required": []
     }
 
+def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any], attribute_key: str) -> Optional[str]:
+    """
+    Extract a specific attribute value from NuMind extraction result.
+    
+    Args:
+        numind_result: The result dictionary from NuMind extraction
+        attribute_key: The specific attribute key to extract
+        
+    Returns:
+        The extracted value as string, or None if not found
+    """
+    if not numind_result or not isinstance(numind_result, dict):
+        logger.warning(f"Invalid NuMind result for attribute '{attribute_key}': {type(numind_result)}")
+        return None
+        
+    try:
+        # Try to get the value directly from the result
+        if attribute_key in numind_result:
+            value = numind_result[attribute_key]
+            if value is not None:
+                return str(value).strip()
+        
+        # If not found directly, try to find it in nested structures
+        for key, value in numind_result.items():
+            if isinstance(value, dict) and attribute_key in value:
+                nested_value = value[attribute_key]
+                if nested_value is not None:
+                    return str(nested_value).strip()
+        
+        logger.debug(f"Attribute '{attribute_key}' not found in NuMind result: {list(numind_result.keys())}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error extracting attribute '{attribute_key}' from NuMind result: {e}")
+        return None
+
 # --- Helper function to invoke chain and process response (KEEP THIS) ---
 async def _invoke_chain_and_process(chain, input_data, attribute_key):
     """Helper to invoke chain, handle errors, and clean response."""
