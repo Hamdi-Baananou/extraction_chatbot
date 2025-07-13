@@ -1584,31 +1584,41 @@ else:
                         previous_latency = result.get('Latency (s)', 0.0)
                         total_latency = previous_latency + round(run_time, 2)
                         
-                        # Check if we should preserve the original "none" value
+                        # Check if we should preserve the original value (rollback logic)
                         original_value = result.get('Extracted Value', '')
-                        should_preserve_none = (original_value.lower() in ["none", "null", "n/a", "na"] and 
-                                              final_answer_value == "NOT FOUND (Final)")
+                        original_source = result.get('Source', 'Unknown')
+                        
+                        # Rollback conditions: preserve original value if Stage 3 failed
+                        should_rollback = (
+                            # Preserve "none" values when confirmed by recheck
+                            (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Final)") or
+                            # Rollback to original when Stage 3 has errors
+                            bool(parse_error) or
+                            final_answer_value in ["Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"]
+                        )
                         
                         # Determine final value
-                        if should_preserve_none:
-                            final_display_value = original_value  # Keep original "none"
-                            final_source = result.get('Source', 'Unknown')  # Keep original source
-                            is_success = True  # Consider "none" as successful if confirmed by recheck
-                            is_not_found = False  # "none" is not "not found"
+                        if should_rollback:
+                            final_display_value = original_value  # Keep original value
+                            final_source = original_source  # Keep original source
+                            is_success = result.get('Is Success', False)  # Keep original success status
+                            is_not_found = result.get('Is Not Found', False)  # Keep original not found status
+                            is_error = result.get('Is Error', False)  # Keep original error status
                         else:
                             final_display_value = final_answer_value
                             final_source = source
                             is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"]
                             is_not_found = final_answer_value in ["NOT FOUND (Final)"]
+                            is_error = bool(parse_error)
                         
                         # Update the result
                         extraction_results_list[i].update({
                             'Extracted Value': final_display_value,
                             'Source': final_source,
-                            'Raw Output': raw_output,
-                            'Parse Error': str(parse_error) if parse_error else None,
+                            'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
+                            'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
                             'Is Success': is_success,
-                            'Is Error': bool(parse_error),
+                            'Is Error': is_error,
                             'Is Not Found': is_not_found,
                             'Is Rate Limit': is_rate_limit,
                             'Latency (s)': total_latency
@@ -1617,13 +1627,15 @@ else:
                         debug_logger.info(f"Stage 3 result updated for {attribute_key}", data={
                             "final_value": final_display_value,
                             "original_value": original_value,
-                            "preserved_none": should_preserve_none,
+                            "should_rollback": should_rollback,
                             "total_latency": total_latency,
                             "success": is_success
                         }, context={"step": "stage3_result_updated", "attribute": attribute_key})
                         
-                        # Show feedback for preserved "none" values
-                        if should_preserve_none:
+                        # Show feedback for rollback
+                        if should_rollback and bool(parse_error):
+                            logger.info(f"Stage 3: Rolled back to original '{original_value}' for '{attribute_key}' (Stage 3 error: {parse_error})")
+                        elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
                             logger.info(f"Stage 3: Preserved original '{original_value}' for '{attribute_key}' (confirmed by recheck)")
                         break
         else:
@@ -1931,37 +1943,49 @@ else:
                                     previous_latency = result.get('Latency (s)', 0.0)
                                     total_latency = previous_latency + round(run_time, 2)
                                     
-                                    # Check if we should preserve the original "none" value
+                                    # Check if we should preserve the original value (rollback logic)
                                     original_value = result.get('Extracted Value', '')
-                                    should_preserve_none = (original_value.lower() in ["none", "null", "n/a", "na"] and 
-                                                          final_answer_value == "NOT FOUND (Manual)")
+                                    original_source = result.get('Source', 'Unknown')
+                                    
+                                    # Rollback conditions: preserve original value if manual recheck failed
+                                    should_rollback = (
+                                        # Preserve "none" values when confirmed by recheck
+                                        (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Manual)") or
+                                        # Rollback to original when manual recheck has errors
+                                        bool(parse_error) or
+                                        final_answer_value in ["Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                    )
                                     
                                     # Determine final value
-                                    if should_preserve_none:
-                                        final_display_value = original_value  # Keep original "none"
-                                        final_source = result.get('Source', 'Unknown')  # Keep original source
-                                        is_success = True  # Consider "none" as successful if confirmed by recheck
-                                        is_not_found = False  # "none" is not "not found"
+                                    if should_rollback:
+                                        final_display_value = original_value  # Keep original value
+                                        final_source = original_source  # Keep original source
+                                        is_success = result.get('Is Success', False)  # Keep original success status
+                                        is_not_found = result.get('Is Not Found', False)  # Keep original not found status
+                                        is_error = result.get('Is Error', False)  # Keep original error status
                                     else:
                                         final_display_value = final_answer_value
                                         final_source = 'Manual Recheck'
                                         is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
                                         is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
+                                        is_error = bool(parse_error)
                                     
                                     st.session_state.evaluation_results[i].update({
                                         'Extracted Value': final_display_value,
                                         'Source': final_source,
-                                        'Raw Output': raw_output,
-                                        'Parse Error': str(parse_error) if parse_error else None,
+                                        'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
+                                        'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
                                         'Is Success': is_success,
-                                        'Is Error': bool(parse_error),
+                                        'Is Error': is_error,
                                         'Is Not Found': is_not_found,
                                         'Is Rate Limit': False,
                                         'Latency (s)': total_latency
                                     })
                                     
-                                    # Show feedback for preserved "none" values
-                                    if should_preserve_none:
+                                    # Show feedback for rollback
+                                    if should_rollback and bool(parse_error):
+                                        st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
+                                    elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
                                         st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
                                     break
                             
