@@ -1584,24 +1584,47 @@ else:
                         previous_latency = result.get('Latency (s)', 0.0)
                         total_latency = previous_latency + round(run_time, 2)
                         
+                        # Check if we should preserve the original "none" value
+                        original_value = result.get('Extracted Value', '')
+                        should_preserve_none = (original_value.lower() in ["none", "null", "n/a", "na"] and 
+                                              final_answer_value == "NOT FOUND (Final)")
+                        
+                        # Determine final value
+                        if should_preserve_none:
+                            final_display_value = original_value  # Keep original "none"
+                            final_source = result.get('Source', 'Unknown')  # Keep original source
+                            is_success = True  # Consider "none" as successful if confirmed by recheck
+                            is_not_found = False  # "none" is not "not found"
+                        else:
+                            final_display_value = final_answer_value
+                            final_source = source
+                            is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"]
+                            is_not_found = final_answer_value in ["NOT FOUND (Final)"]
+                        
                         # Update the result
                         extraction_results_list[i].update({
-                            'Extracted Value': final_answer_value,
-                            'Source': source,
+                            'Extracted Value': final_display_value,
+                            'Source': final_source,
                             'Raw Output': raw_output,
                             'Parse Error': str(parse_error) if parse_error else None,
-                            'Is Success': not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"],
+                            'Is Success': is_success,
                             'Is Error': bool(parse_error),
-                            'Is Not Found': final_answer_value in ["NOT FOUND (Final)"],
+                            'Is Not Found': is_not_found,
                             'Is Rate Limit': is_rate_limit,
                             'Latency (s)': total_latency
                         })
                         
                         debug_logger.info(f"Stage 3 result updated for {attribute_key}", data={
-                            "final_value": final_answer_value,
+                            "final_value": final_display_value,
+                            "original_value": original_value,
+                            "preserved_none": should_preserve_none,
                             "total_latency": total_latency,
-                            "success": not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"]
+                            "success": is_success
                         }, context={"step": "stage3_result_updated", "attribute": attribute_key})
+                        
+                        # Show feedback for preserved "none" values
+                        if should_preserve_none:
+                            logger.info(f"Stage 3: Preserved original '{original_value}' for '{attribute_key}' (confirmed by recheck)")
                         break
         else:
             st.success("No attributes need final fallback - all extractions completed successfully.")
@@ -1764,6 +1787,28 @@ else:
         st.divider()
         st.subheader("🔄 Manual Attribute Recheck")
         
+        # Help section
+        with st.expander("ℹ️ How to use Manual Recheck"):
+            st.markdown("""
+            **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
+            
+            1. **Select attributes** from the dropdown below
+            2. **Click "Run Manual Recheck"** button
+            3. **Wait for results** - each attribute will be rechecked with enhanced prompts
+            4. **Review results** - successful extractions will show green checkmarks
+            
+            **When to use:**
+            - Attributes that returned "NOT FOUND"
+            - Attributes that returned "none" (might be incorrect)
+            - Attributes with errors or unexpected formats
+            - Any attribute you suspect might have been missed
+            
+            **What happens:**
+            - Uses more document chunks (15 instead of 8-12)
+            - Enhanced prompts specifically for rechecking
+            - Preserves original "none" values if recheck confirms they're correct
+            """)
+        
         # Get attributes that might need manual recheck
         manual_recheck_candidates = []
         for result in st.session_state.evaluation_results:
@@ -1886,17 +1931,38 @@ else:
                                     previous_latency = result.get('Latency (s)', 0.0)
                                     total_latency = previous_latency + round(run_time, 2)
                                     
+                                    # Check if we should preserve the original "none" value
+                                    original_value = result.get('Extracted Value', '')
+                                    should_preserve_none = (original_value.lower() in ["none", "null", "n/a", "na"] and 
+                                                          final_answer_value == "NOT FOUND (Manual)")
+                                    
+                                    # Determine final value
+                                    if should_preserve_none:
+                                        final_display_value = original_value  # Keep original "none"
+                                        final_source = result.get('Source', 'Unknown')  # Keep original source
+                                        is_success = True  # Consider "none" as successful if confirmed by recheck
+                                        is_not_found = False  # "none" is not "not found"
+                                    else:
+                                        final_display_value = final_answer_value
+                                        final_source = 'Manual Recheck'
+                                        is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                        is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
+                                    
                                     st.session_state.evaluation_results[i].update({
-                                        'Extracted Value': final_answer_value,
-                                        'Source': 'Manual Recheck',
+                                        'Extracted Value': final_display_value,
+                                        'Source': final_source,
                                         'Raw Output': raw_output,
                                         'Parse Error': str(parse_error) if parse_error else None,
-                                        'Is Success': not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"],
+                                        'Is Success': is_success,
                                         'Is Error': bool(parse_error),
-                                        'Is Not Found': final_answer_value in ["NOT FOUND (Manual)"],
+                                        'Is Not Found': is_not_found,
                                         'Is Rate Limit': False,
                                         'Latency (s)': total_latency
                                     })
+                                    
+                                    # Show feedback for preserved "none" values
+                                    if should_preserve_none:
+                                        st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
                                     break
                             
                             time.sleep(0.5)  # Brief delay between manual rechecks
