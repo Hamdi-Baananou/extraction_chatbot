@@ -1422,14 +1422,31 @@ else:
                     extracted_value in ["NOT FOUND", "Error", "Processing Error", "Unexpected JSON Format", "Unexpected JSON Type"] or
                     not extracted_value or 
                     extracted_value.strip() == "" or
-                    extracted_value == "(Web Stage Skipped)"):
+                    extracted_value == "(Web Stage Skipped)" or
+                    extracted_value.lower() in ["none", "null", "n/a", "na"]):  # Also recheck "none" responses
                     final_fallback_needed.append(result.get('Prompt Name', ''))
         
         if final_fallback_needed:
+            # Count how many are "none" responses
+            none_responses = []
+            other_fallbacks = []
+            for result in extraction_results_list:
+                if isinstance(result, dict) and result.get('Prompt Name') in final_fallback_needed:
+                    extracted_value = result.get('Extracted Value', '')
+                    if extracted_value.lower() in ["none", "null", "n/a", "na"]:
+                        none_responses.append(result.get('Prompt Name'))
+                    else:
+                        other_fallbacks.append(result.get('Prompt Name'))
+            
             st.info(f"Running Stage 3 (Final Fallback) for {len(final_fallback_needed)} attributes that need rechecking...")
+            if none_responses:
+                st.warning(f"⚠️ Including {len(none_responses)} attributes that returned 'none' responses - these will be rechecked for potential missed values.")
+            
             debug_logger.info("Starting Stage 3 (Final Fallback)", data={
                 "fallback_count": len(final_fallback_needed),
-                "fallback_attributes": final_fallback_needed
+                "fallback_attributes": final_fallback_needed,
+                "none_responses": none_responses,
+                "other_fallbacks": other_fallbacks
             }, context={"step": "stage3_start"})
             
             col_index = 0
@@ -1461,9 +1478,22 @@ else:
                             context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                             
                             # Enhanced prompt for final fallback
+                            # Check if this attribute previously returned "none" or similar
+                            previous_value = None
+                            for result in extraction_results_list:
+                                if result.get('Prompt Name') == prompt_name:
+                                    previous_value = result.get('Extracted Value', '')
+                                    break
+                            
+                            # Customize prompt based on previous result
+                            if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
+                                enhanced_instruction = f"{pdf_instruction}\n\nCRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value."
+                            else:
+                                enhanced_instruction = f"{pdf_instruction}\n\nIMPORTANT: This is a final recheck. Be more thorough and consider alternative interpretations. If the information is not explicitly stated, try to infer from related context or technical specifications."
+                            
                             enhanced_pdf_input = {
                                 "context": context_text,
-                                "extraction_instructions": f"{pdf_instruction}\n\nIMPORTANT: This is a final recheck. Be more thorough and consider alternative interpretations. If the information is not explicitly stated, try to infer from related context or technical specifications.",
+                                "extraction_instructions": enhanced_instruction,
                                 "attribute_key": attribute_key,
                                 "part_number": part_number if part_number else "Not Provided"
                             }
@@ -1521,8 +1551,10 @@ else:
                     
                     if isinstance(parsed_json, dict) and attribute_key in parsed_json:
                         parsed_value = str(parsed_json[attribute_key])
-                        # For final fallback, be more lenient with empty values
-                        if parsed_value.strip() == "" or "not found" in parsed_value.lower():
+                        # For final fallback, be more lenient with empty values and "none" responses
+                        if (parsed_value.strip() == "" or 
+                            "not found" in parsed_value.lower() or
+                            parsed_value.lower() in ["none", "null", "n/a", "na"]):
                             final_answer_value = "NOT FOUND (Final)"
                         else:
                             final_answer_value = parsed_value
@@ -1744,11 +1776,25 @@ else:
                     extracted_value in ["NOT FOUND", "NOT FOUND (Final)", "Error", "Processing Error", "Processing Error (Final)", "Unexpected JSON Format", "Unexpected JSON Format (Final)", "Unexpected JSON Type"] or
                     not extracted_value or 
                     extracted_value.strip() == "" or
-                    extracted_value == "(Web Stage Skipped)"):
+                    extracted_value == "(Web Stage Skipped)" or
+                    extracted_value.lower() in ["none", "null", "n/a", "na"]):  # Also include "none" responses for manual recheck
                     manual_recheck_candidates.append(result.get('Prompt Name', ''))
         
         if manual_recheck_candidates:
+            # Count "none" responses in manual recheck candidates
+            none_candidates = []
+            other_candidates = []
+            for result in st.session_state.evaluation_results:
+                if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
+                    extracted_value = result.get('Extracted Value', '')
+                    if extracted_value.lower() in ["none", "null", "n/a", "na"]:
+                        none_candidates.append(result.get('Prompt Name'))
+                    else:
+                        other_candidates.append(result.get('Prompt Name'))
+            
             st.info(f"Found {len(manual_recheck_candidates)} attributes that might benefit from manual recheck.")
+            if none_candidates:
+                st.warning(f"⚠️ {len(none_candidates)} of these returned 'none' responses and may contain missed values.")
             
             # Allow user to select specific attributes for recheck
             selected_for_recheck = st.multiselect(
@@ -1780,9 +1826,22 @@ else:
                             context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                             
                             # Enhanced prompt for manual recheck
+                            # Check if this attribute previously returned "none" or similar
+                            previous_value = None
+                            for result in st.session_state.evaluation_results:
+                                if result.get('Prompt Name') == prompt_name:
+                                    previous_value = result.get('Extracted Value', '')
+                                    break
+                            
+                            # Customize manual recheck prompt based on previous result
+                            if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
+                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK - CRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value. This is a manual recheck request - be exhaustive in your search."
+                            else:
+                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context."
+                            
                             manual_recheck_input = {
                                 "context": context_text,
-                                "extraction_instructions": f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context.",
+                                "extraction_instructions": manual_instruction,
                                 "attribute_key": attribute_key,
                                 "part_number": part_number if part_number else "Not Provided"
                             }
@@ -1803,7 +1862,9 @@ else:
                                 
                                 if isinstance(parsed_json, dict) and attribute_key in parsed_json:
                                     parsed_value = str(parsed_json[attribute_key])
-                                    if parsed_value.strip() == "" or "not found" in parsed_value.lower():
+                                    if (parsed_value.strip() == "" or 
+                                        "not found" in parsed_value.lower() or
+                                        parsed_value.lower() in ["none", "null", "n/a", "na"]):
                                         final_answer_value = "NOT FOUND (Manual)"
                                     else:
                                         final_answer_value = parsed_value
