@@ -894,8 +894,47 @@ else:
         }, context={"step": "web_scraping_complete"})
         # -------------------------------------------------
 
-        # --- Block 1b: Two-Stage Extraction Logic --- 
+        # --- Block 1b: Three-Stage Extraction Logic --- 
         st.info(f"Running Stage 1 (Web Data Extraction) for {len(prompts_to_run)} attributes...")
+        
+        # Progress indicator for three-stage process
+        progress_col1, progress_col2, progress_col3 = st.columns(3)
+        with progress_col1:
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                            color: white; 
+                            padding: 0.5rem; 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            margin-bottom: 1rem;">
+                    <strong>Stage 1: Web</strong><br>
+                    <small>Web scraping & extraction</small>
+                </div>
+            """, unsafe_allow_html=True)
+        with progress_col2:
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+                            color: white; 
+                            padding: 0.5rem; 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            margin-bottom: 1rem;">
+                    <strong>Stage 2: NuMind</strong><br>
+                    <small>Structured extraction</small>
+                </div>
+            """, unsafe_allow_html=True)
+        with progress_col3:
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); 
+                            color: white; 
+                            padding: 0.5rem; 
+                            border-radius: 10px; 
+                            text-align: center; 
+                            margin-bottom: 1rem;">
+                    <strong>Stage 3: Fallback</strong><br>
+                    <small>Final recheck</small>
+                </div>
+            """, unsafe_allow_html=True)
         
         cols = st.columns(2) # For displaying progress
         col_index = 0
@@ -1369,8 +1408,224 @@ else:
         # Convert intermediate_results dict to list
         extraction_results_list = list(intermediate_results.values()) 
         
+        # --- Stage 3: Final Fallback for NOT FOUND and None Values ---
+        # Identify attributes that need final fallback
+        final_fallback_needed = []
+        for result in extraction_results_list:
+            if isinstance(result, dict):
+                extracted_value = result.get('Extracted Value', '')
+                is_not_found = result.get('Is Not Found', False)
+                is_error = result.get('Is Error', False)
+                
+                # Check for attributes that need final fallback
+                if (is_not_found or 
+                    extracted_value in ["NOT FOUND", "Error", "Processing Error", "Unexpected JSON Format", "Unexpected JSON Type"] or
+                    not extracted_value or 
+                    extracted_value.strip() == "" or
+                    extracted_value == "(Web Stage Skipped)"):
+                    final_fallback_needed.append(result.get('Prompt Name', ''))
+        
+        if final_fallback_needed:
+            st.info(f"Running Stage 3 (Final Fallback) for {len(final_fallback_needed)} attributes that need rechecking...")
+            debug_logger.info("Starting Stage 3 (Final Fallback)", data={
+                "fallback_count": len(final_fallback_needed),
+                "fallback_attributes": final_fallback_needed
+            }, context={"step": "stage3_start"})
+            
+            col_index = 0
+            SLEEP_INTERVAL_SECONDS = 0.3
+            
+            for prompt_name in final_fallback_needed:
+                attribute_key = prompt_name
+                pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+                current_col = cols[col_index % 2]
+                col_index += 1
+                json_result_str = None
+                run_time = 0.0
+                source = "Final Fallback"
+                
+                debug_logger.info(f"Final fallback for attribute: {attribute_key}", context={"step": "stage3_attribute", "attribute": attribute_key})
+                
+                with current_col:
+                    with st.spinner(f"Stage 3: Final recheck for {attribute_key}..."):
+                        try:
+                            start_time = time.time()
+                            
+                            # Use more chunks for final fallback to be more thorough
+                            context_chunks = fetch_chunks(
+                                st.session_state.retriever,
+                                part_number,
+                                attribute_key,
+                                k=12  # Increased from 8 to 12 for more thorough search
+                            )
+                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                            
+                            # Enhanced prompt for final fallback
+                            enhanced_pdf_input = {
+                                "context": context_text,
+                                "extraction_instructions": f"{pdf_instruction}\n\nIMPORTANT: This is a final recheck. Be more thorough and consider alternative interpretations. If the information is not explicitly stated, try to infer from related context or technical specifications.",
+                                "attribute_key": attribute_key,
+                                "part_number": part_number if part_number else "Not Provided"
+                            }
+                            
+                            debug_logger.llm_request(
+                                f"Final fallback extraction for {attribute_key}",
+                                "pdf_chain",
+                                0.7,
+                                1500,  # Increased token limit for more thorough analysis
+                                context={"step": "stage3_llm_request", "attribute": attribute_key}
+                            )
+                            
+                            json_result_str = loop.run_until_complete(
+                                _invoke_chain_and_process(st.session_state.pdf_chain, enhanced_pdf_input, f"{attribute_key} (Final Fallback)")
+                            )
+                            run_time = time.time() - start_time
+                            
+                            debug_logger.llm_response(
+                                "pdf_chain",
+                                json_result_str if json_result_str else "",
+                                len(json_result_str) if json_result_str else 0,
+                                run_time,
+                                context={"step": "stage3_llm_response", "attribute": attribute_key}
+                            )
+                            
+                            time.sleep(SLEEP_INTERVAL_SECONDS)
+                            
+                        except Exception as e:
+                            logger.error(f"Error during Stage 3 (Final Fallback) call for '{attribute_key}': {e}", exc_info=True)
+                            json_result_str = f'{{"error": "Exception during Stage 3 call: {e}"}}'
+                            run_time = time.time() - start_time
+                            
+                            debug_logger.exception(e, context={
+                                "step": "stage3_exception",
+                                "attribute": attribute_key,
+                                "duration": run_time
+                            })
+                
+                # Parse final fallback result
+                final_answer_value = "Error"
+                parse_error = None
+                is_rate_limit = False
+                raw_output = json_result_str if json_result_str else '{"error": "Stage 3 did not run"}'
+                
+                try:
+                    string_to_parse = raw_output.strip()
+                    parsed_json = extract_json_from_string(string_to_parse)
+                    
+                    debug_logger.data_transformation(
+                        f"Final fallback JSON parsing for {attribute_key}",
+                        string_to_parse,
+                        parsed_json,
+                        context={"step": "stage3_json_parsing", "attribute": attribute_key}
+                    )
+                    
+                    if isinstance(parsed_json, dict) and attribute_key in parsed_json:
+                        parsed_value = str(parsed_json[attribute_key])
+                        # For final fallback, be more lenient with empty values
+                        if parsed_value.strip() == "" or "not found" in parsed_value.lower():
+                            final_answer_value = "NOT FOUND (Final)"
+                        else:
+                            final_answer_value = parsed_value
+                            logger.success(f"Stage 3 successful for '{attribute_key}' with value: {parsed_value}")
+                    elif isinstance(parsed_json, dict) and "error" in parsed_json:
+                        final_answer_value = f"Error: {parsed_json['error'][:100]}"
+                        parse_error = ValueError(f"Stage 3 Error: {parsed_json['error']}")
+                    else:
+                        final_answer_value = "Unexpected JSON Format (Final)"
+                        parse_error = ValueError(f"Stage 3 Unexpected JSON format")
+                        
+                except Exception as processing_exc:
+                    parse_error = processing_exc
+                    final_answer_value = "Processing Error (Final)"
+                    logger.error(f"Error processing Stage 3 result for '{attribute_key}'. Error: {processing_exc}")
+                    
+                    debug_logger.exception(processing_exc, context={
+                        "step": "stage3_processing_exception",
+                        "attribute": attribute_key,
+                        "raw_output": string_to_parse
+                    })
+                
+                # Update the result in the list
+                for i, result in enumerate(extraction_results_list):
+                    if result.get('Prompt Name') == prompt_name:
+                        # Calculate total latency including previous stages
+                        previous_latency = result.get('Latency (s)', 0.0)
+                        total_latency = previous_latency + round(run_time, 2)
+                        
+                        # Update the result
+                        extraction_results_list[i].update({
+                            'Extracted Value': final_answer_value,
+                            'Source': source,
+                            'Raw Output': raw_output,
+                            'Parse Error': str(parse_error) if parse_error else None,
+                            'Is Success': not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"],
+                            'Is Error': bool(parse_error),
+                            'Is Not Found': final_answer_value in ["NOT FOUND (Final)"],
+                            'Is Rate Limit': is_rate_limit,
+                            'Latency (s)': total_latency
+                        })
+                        
+                        debug_logger.info(f"Stage 3 result updated for {attribute_key}", data={
+                            "final_value": final_answer_value,
+                            "total_latency": total_latency,
+                            "success": not bool(parse_error) and final_answer_value not in ["NOT FOUND (Final)", "Error", "Processing Error (Final)", "Unexpected JSON Format (Final)"]
+                        }, context={"step": "stage3_result_updated", "attribute": attribute_key})
+                        break
+        else:
+            st.success("No attributes need final fallback - all extractions completed successfully.")
+            debug_logger.info("No final fallback needed", data={
+                "reason": "All attributes successful in previous stages"
+            }, context={"step": "stage3_skipped_all_successful"})
+        
+        # --- Stage Summary ---
+        st.divider()
+        st.subheader("📊 Extraction Stage Summary")
+        
+        # Count results by source
+        stage_summary = {}
+        for result in extraction_results_list:
+            if isinstance(result, dict):
+                source = result.get('Source', 'Unknown')
+                is_success = result.get('Is Success', False)
+                is_error = result.get('Is Error', False)
+                is_not_found = result.get('Is Not Found', False)
+                
+                if source not in stage_summary:
+                    stage_summary[source] = {'total': 0, 'success': 0, 'error': 0, 'not_found': 0}
+                
+                stage_summary[source]['total'] += 1
+                if is_success:
+                    stage_summary[source]['success'] += 1
+                elif is_error:
+                    stage_summary[source]['error'] += 1
+                elif is_not_found:
+                    stage_summary[source]['not_found'] += 1
+        
+        # Display stage summary
+        summary_cols = st.columns(len(stage_summary))
+        for i, (source, stats) in enumerate(stage_summary.items()):
+            with summary_cols[i]:
+                success_rate = (stats['success'] / stats['total'] * 100) if stats['total'] > 0 else 0
+                color = "#28a745" if success_rate > 70 else "#ffc107" if success_rate > 30 else "#dc3545"
+                
+                st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, {color} 0%, {color}80 100%); 
+                                color: white; 
+                                padding: 1rem; 
+                                border-radius: 10px; 
+                                text-align: center; 
+                                margin-bottom: 1rem;">
+                        <h4 style="margin: 0;">{source}</h4>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">
+                            Success: {stats['success']}/{stats['total']} ({success_rate:.1f}%)<br>
+                            Errors: {stats['error']} | Not Found: {stats['not_found']}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+        
         debug_logger.info("Extraction process completed", data={
             "total_results": len(extraction_results_list),
+            "stage_summary": stage_summary,
             "results_summary": {
                 "success_count": sum(1 for r in extraction_results_list if r.get('Is Success', False)),
                 "error_count": sum(1 for r in extraction_results_list if r.get('Is Error', False)),
@@ -1387,7 +1642,7 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter on success
             logger.info("Extraction completed successfully, setting extraction_performed=True")
-            st.success("Extraction complete (using Web data where possible, falling back to NuMind). Enter ground truth below.")
+            st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback). Enter ground truth below.")
             
             debug_logger.session_state("evaluation_results", extraction_results_list, context={"step": "results_stored"})
             debug_logger.session_state("extraction_performed", True, context={"step": "extraction_flag_set"})
@@ -1472,6 +1727,127 @@ else:
         # --- Mini Debug Widget ---
         from debug_interface import create_mini_debug_widget
         create_mini_debug_widget()
+        
+        # --- Manual Recheck Section ---
+        st.divider()
+        st.subheader("🔄 Manual Attribute Recheck")
+        
+        # Get attributes that might need manual recheck
+        manual_recheck_candidates = []
+        for result in st.session_state.evaluation_results:
+            if isinstance(result, dict):
+                extracted_value = result.get('Extracted Value', '')
+                is_not_found = result.get('Is Not Found', False)
+                is_error = result.get('Is Error', False)
+                
+                if (is_not_found or 
+                    extracted_value in ["NOT FOUND", "NOT FOUND (Final)", "Error", "Processing Error", "Processing Error (Final)", "Unexpected JSON Format", "Unexpected JSON Format (Final)", "Unexpected JSON Type"] or
+                    not extracted_value or 
+                    extracted_value.strip() == "" or
+                    extracted_value == "(Web Stage Skipped)"):
+                    manual_recheck_candidates.append(result.get('Prompt Name', ''))
+        
+        if manual_recheck_candidates:
+            st.info(f"Found {len(manual_recheck_candidates)} attributes that might benefit from manual recheck.")
+            
+            # Allow user to select specific attributes for recheck
+            selected_for_recheck = st.multiselect(
+                "Select attributes to recheck:",
+                options=manual_recheck_candidates,
+                default=manual_recheck_candidates[:3],  # Default to first 3
+                help="Select attributes that returned 'NOT FOUND' or errors for additional extraction attempts."
+            )
+            
+            if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
+                st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
+                
+                # Run manual recheck
+                for prompt_name in selected_for_recheck:
+                    attribute_key = prompt_name
+                    pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+                    
+                    with st.spinner(f"Manual recheck for {attribute_key}..."):
+                        try:
+                            start_time = time.time()
+                            
+                            # Use even more chunks for manual recheck
+                            context_chunks = fetch_chunks(
+                                st.session_state.retriever,
+                                part_number,
+                                attribute_key,
+                                k=15  # Increased for thorough manual recheck
+                            )
+                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                            
+                            # Enhanced prompt for manual recheck
+                            manual_recheck_input = {
+                                "context": context_text,
+                                "extraction_instructions": f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context.",
+                                "attribute_key": attribute_key,
+                                "part_number": part_number if part_number else "Not Provided"
+                            }
+                            
+                            json_result_str = loop.run_until_complete(
+                                _invoke_chain_and_process(st.session_state.pdf_chain, manual_recheck_input, f"{attribute_key} (Manual Recheck)")
+                            )
+                            run_time = time.time() - start_time
+                            
+                            # Parse result
+                            final_answer_value = "Error"
+                            parse_error = None
+                            raw_output = json_result_str if json_result_str else '{"error": "Manual recheck did not run"}'
+                            
+                            try:
+                                string_to_parse = raw_output.strip()
+                                parsed_json = extract_json_from_string(string_to_parse)
+                                
+                                if isinstance(parsed_json, dict) and attribute_key in parsed_json:
+                                    parsed_value = str(parsed_json[attribute_key])
+                                    if parsed_value.strip() == "" or "not found" in parsed_value.lower():
+                                        final_answer_value = "NOT FOUND (Manual)"
+                                    else:
+                                        final_answer_value = parsed_value
+                                        st.success(f"Manual recheck successful for '{attribute_key}': {parsed_value}")
+                                elif isinstance(parsed_json, dict) and "error" in parsed_json:
+                                    final_answer_value = f"Error: {parsed_json['error'][:100]}"
+                                    parse_error = ValueError(f"Manual Recheck Error: {parsed_json['error']}")
+                                else:
+                                    final_answer_value = "Unexpected JSON Format (Manual)"
+                                    parse_error = ValueError(f"Manual Recheck Unexpected JSON format")
+                                    
+                            except Exception as processing_exc:
+                                parse_error = processing_exc
+                                final_answer_value = "Processing Error (Manual)"
+                            
+                            # Update the result
+                            for i, result in enumerate(st.session_state.evaluation_results):
+                                if result.get('Prompt Name') == prompt_name:
+                                    previous_latency = result.get('Latency (s)', 0.0)
+                                    total_latency = previous_latency + round(run_time, 2)
+                                    
+                                    st.session_state.evaluation_results[i].update({
+                                        'Extracted Value': final_answer_value,
+                                        'Source': 'Manual Recheck',
+                                        'Raw Output': raw_output,
+                                        'Parse Error': str(parse_error) if parse_error else None,
+                                        'Is Success': not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"],
+                                        'Is Error': bool(parse_error),
+                                        'Is Not Found': final_answer_value in ["NOT FOUND (Manual)"],
+                                        'Is Rate Limit': False,
+                                        'Latency (s)': total_latency
+                                    })
+                                    break
+                            
+                            time.sleep(0.5)  # Brief delay between manual rechecks
+                            
+                        except Exception as e:
+                            st.error(f"Error during manual recheck for '{attribute_key}': {e}")
+                            logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
+                
+                st.success("Manual recheck completed!")
+                st.rerun()  # Refresh to show updated results
+        else:
+            st.success("All attributes have been successfully extracted! No manual recheck needed.")
 
         # --- View Raw Mistral Extraction ---
         if st.session_state.processed_documents:
