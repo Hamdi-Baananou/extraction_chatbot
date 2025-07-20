@@ -1800,6 +1800,9 @@ else:
                 help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
             )
             
+            # --- Ensure part_number is defined for manual recheck ---
+            part_number = st.session_state.get("part_number_input", "").strip()
+            
             if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
                 st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
                 
