@@ -1688,28 +1688,32 @@ else:
 
         st.divider()
         st.subheader("🗂️ Extracted Attributes (Click to Expand)")
-        for result in st.session_state.evaluation_results:
-            if not isinstance(result, dict):
-                continue
-            attr_name = result.get('Prompt Name', 'Unknown Attribute')
-            value = result.get('Extracted Value', '')
-            source = result.get('Source', 'Unknown')
-            latency = result.get('Latency (s)', None)
-            raw_output = result.get('Raw Output', '')
-            raw_snippet = strip_html_tags(raw_output)[:300] + ("..." if raw_output and len(raw_output) > 300 else "")
-            is_success = result.get('Is Success', False)
-            is_error = result.get('Is Error', False)
-            is_not_found = result.get('Is Not Found', False)
+        # Display cards in a grid: 4 per row
+        results = [r for r in st.session_state.evaluation_results if isinstance(r, dict)]
+        num_cols = 4
+        for i in range(0, len(results), num_cols):
+            cols = st.columns(num_cols)
+            for j, result in enumerate(results[i:i+num_cols]):
+                with cols[j]:
+                    attr_name = result.get('Prompt Name', 'Unknown Attribute')
+                    value = result.get('Extracted Value', '')
+                    source = result.get('Source', 'Unknown')
+                    latency = result.get('Latency (s)', None)
+                    raw_output = result.get('Raw Output', '')
+                    raw_snippet = strip_html_tags(raw_output)[:300] + ("..." if raw_output and len(raw_output) > 300 else "")
+                    is_success = result.get('Is Success', False)
+                    is_error = result.get('Is Error', False)
+                    is_not_found = result.get('Is Not Found', False)
 
-            card_status = 'success-true' if is_success else ('success-false' if is_error or is_not_found else '')
-            with st.expander(f"{attr_name}"):
-                st.markdown(f'''<div class="attribute-card">
-                    <h4>{attr_name}</h4>
-                    <div class="attribute-value">{value}</div>
-                    <div class="attribute-source">Source: <b>{source}</b></div>
-                    <div class="attribute-source">Processing Time: <b>{latency:.2f} s</b></div>
-                    <div class="attribute-source">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
-                </div>''', unsafe_allow_html=True)
+                    card_status = 'success-true' if is_success else ('success-false' if is_error or is_not_found else '')
+                    with st.expander(f"{attr_name}"):
+                        st.markdown(f'''<div class=\"attribute-card\">
+                            <h4>{attr_name}</h4>
+                            <div class=\"attribute-value\">{value}</div>
+                            <div class=\"attribute-source\">Source: <b>{source}</b></div>
+                            <div class=\"attribute-source\">Processing Time: <b>{latency:.2f} s</b></div>
+                            <div class=\"attribute-source\">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
+                        </div>''', unsafe_allow_html=True)
         # --- End Card-based UI ---
 
         st.divider()
