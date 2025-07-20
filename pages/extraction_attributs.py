@@ -1770,34 +1770,25 @@ else:
             """)
         
         # Get attributes that might need manual recheck
+        # Now allow ALL attributes to be rechecked, not just failed ones
         manual_recheck_candidates = []
         for result in st.session_state.evaluation_results:
             if isinstance(result, dict):
-                extracted_value = result.get('Extracted Value', '')
-                is_not_found = result.get('Is Not Found', False)
-                is_error = result.get('Is Error', False)
-                
-                if (is_not_found or 
-                    extracted_value in ["NOT FOUND", "NOT FOUND (Final)", "Error", "Processing Error", "Processing Error (Final)", "Unexpected JSON Format", "Unexpected JSON Format (Final)", "Unexpected JSON Type"] or
-                    not extracted_value or 
-                    extracted_value.strip() == "" or
-                    extracted_value == "(Web Stage Skipped)" or
-                    extracted_value.lower() in ["none", "null", "n/a", "na"]):  # Also include "none" responses for manual recheck
-                    manual_recheck_candidates.append(result.get('Prompt Name', ''))
+                manual_recheck_candidates.append(result.get('Prompt Name', ''))
         
         if manual_recheck_candidates:
-            # Count "none" responses in manual recheck candidates
+            # Count "none" responses in manual recheck candidates (for info only)
             none_candidates = []
             other_candidates = []
             for result in st.session_state.evaluation_results:
                 if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
                     extracted_value = result.get('Extracted Value', '')
-                    if extracted_value.lower() in ["none", "null", "n/a", "na"]:
+                    if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
                         none_candidates.append(result.get('Prompt Name'))
                     else:
                         other_candidates.append(result.get('Prompt Name'))
             
-            st.info(f"Found {len(manual_recheck_candidates)} attributes that might benefit from manual recheck.")
+            st.info(f"You can recheck any of the {len(manual_recheck_candidates)} attributes below.")
             if none_candidates:
                 st.warning(f"⚠️ {len(none_candidates)} of these returned 'none' responses and may contain missed values.")
             
@@ -1806,7 +1797,7 @@ else:
                 "Select attributes to recheck:",
                 options=manual_recheck_candidates,
                 default=manual_recheck_candidates[:3],  # Default to first 3
-                help="Select attributes that returned 'NOT FOUND' or errors for additional extraction attempts."
+                help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
             )
             
             if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
@@ -2127,6 +2118,6 @@ with right_col:
     else:
         st.info("📄 Upload and process documents to see extracted results here.")
     
-    # Chatbot Section
+    
     
 
