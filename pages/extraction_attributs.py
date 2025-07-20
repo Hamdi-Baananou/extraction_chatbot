@@ -1686,8 +1686,53 @@ else:
             clean = re.compile('<.*?>')
             return re.sub(clean, '', text)
 
+        # --- Update CSS for compact cards ---
+        st.markdown(
+            """
+            <style>
+            .attribute-card {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border: 1.5px solid #1e3c72;
+                border-radius: 6px;
+                padding: 0.4rem 0.6rem 0.6rem 0.6rem;
+                min-width: 0;
+                width: 100%;
+                box-shadow: 0 2px 6px rgba(30, 60, 114, 0.07);
+                margin: 0 0 0.5rem 0;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .attribute-card h4 {
+                color: #1e3c72;
+                margin: 0 0 0.3rem 0;
+                font-size: 1em;
+                font-weight: 700;
+                border-bottom: 1px solid #1e3c72;
+                padding-bottom: 0.2rem;
+                width: 100%;
+            }
+            .attribute-value {
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 0.25rem 0.5rem;
+                margin: 0.1rem 0 0 0;
+                font-weight: 500;
+                font-size: 0.95em;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            /* Remove extra margin between columns */
+            .element-container .stColumn > div {
+                margin-right: 0 !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         st.divider()
-        st.subheader("🗂️ Extracted Attributes (Responsive Grid)")
+        st.subheader("🗂️ Extracted Attributes (Compact Grid)")
         # Display cards in a responsive grid: up to 4 per row, only name and value
         results = [r for r in st.session_state.evaluation_results if isinstance(r, dict)]
         num_cols = 4
