@@ -1605,63 +1605,7 @@ else:
             }, context={"step": "stage3_skipped_all_successful"})
         
         # --- Stage Summary ---
-        st.divider()
-        st.subheader("📊 Extraction Stage Summary")
-        
-        # Count results by source
-        stage_summary = {}
-        for result in extraction_results_list:
-            if isinstance(result, dict):
-                source = result.get('Source', 'Unknown')
-                is_success = result.get('Is Success', False)
-                is_error = result.get('Is Error', False)
-                is_not_found = result.get('Is Not Found', False)
-                
-                if source not in stage_summary:
-                    stage_summary[source] = {'total': 0, 'success': 0, 'error': 0, 'not_found': 0}
-                
-                stage_summary[source]['total'] += 1
-                if is_success:
-                    stage_summary[source]['success'] += 1
-                elif is_error:
-                    stage_summary[source]['error'] += 1
-                elif is_not_found:
-                    stage_summary[source]['not_found'] += 1
-        
-        # Display stage summary
-        summary_cols = st.columns(len(stage_summary))
-        for i, (source, stats) in enumerate(stage_summary.items()):
-            with summary_cols[i]:
-                success_rate = (stats['success'] / stats['total'] * 100) if stats['total'] > 0 else 0
-                color = "#28a745" if success_rate > 70 else "#ffc107" if success_rate > 30 else "#dc3545"
-                
-                st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, {color} 0%, {color}80 100%); 
-                                color: white; 
-                                padding: 1rem; 
-                                border-radius: 10px; 
-                                text-align: center; 
-                                margin-bottom: 1rem;">
-                        <h4 style="margin: 0;">{source}</h4>
-                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">
-                            Success: {stats['success']}/{stats['total']} ({success_rate:.1f}%)<br>
-                            Errors: {stats['error']} | Not Found: {stats['not_found']}
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
-        
-        debug_logger.info("Extraction process completed", data={
-            "total_results": len(extraction_results_list),
-            "stage_summary": stage_summary,
-            "results_summary": {
-                "success_count": sum(1 for r in extraction_results_list if r.get('Is Success', False)),
-                "error_count": sum(1 for r in extraction_results_list if r.get('Is Error', False)),
-                "not_found_count": sum(1 for r in extraction_results_list if r.get('Is Not Found', False)),
-                "rate_limit_count": sum(1 for r in extraction_results_list if r.get('Is Rate Limit', False))
-            }
-        }, context={"step": "extraction_complete"})
-        
-        # Set extraction_performed flag and handle success/error messages
+        # (REMOVED Extraction Stage Summary UI section)
         extraction_successful = True # Assume success unless critical errors occurred (e.g., chain init)
 
         if extraction_successful:
@@ -1669,27 +1613,23 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter on success
             logger.info("Extraction completed successfully, setting extraction_performed=True")
-            st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback). Enter ground truth below.")
-            
+            st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback).")
             debug_logger.session_state("evaluation_results", extraction_results_list, context={"step": "results_stored"})
             debug_logger.session_state("extraction_performed", True, context={"step": "extraction_flag_set"})
             debug_logger.session_state("extraction_attempts", 0, context={"step": "attempts_reset"})
             debug_logger.info("Extraction completed successfully", context={"step": "extraction_success"})
-            # st.rerun() # REMOVE/COMMENT OUT to keep cards visible
         else:
             st.error("Extraction process encountered critical issues.")
-            # Optionally store partial results if desired
             st.session_state.evaluation_results = extraction_results_list
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter even on error
             logger.info("Extraction completed with issues, setting extraction_performed=True")
-            
             debug_logger.warning("Extraction completed with issues", data={
                 "results_count": len(extraction_results_list)
             }, context={"step": "extraction_with_issues"})
-            # st.rerun() # REMOVE/COMMENT OUT to keep cards visible (even on error)
 
         # --- Card-based UI for Extracted Attributes ---
+        # (REMOVED 3. Enter Ground Truth & Evaluate and 4. View Raw Mistral Extraction UI sections)
         import re
         def strip_html_tags(text):
             if not isinstance(text, str):
