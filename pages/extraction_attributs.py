@@ -298,51 +298,6 @@ st.markdown(
 )
 
 # --- Chatbot Functions ---
-def initialize_chatbot():
-    """Initialize chatbot components"""
-    try:
-        GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-        groq_client = Groq(api_key=GROQ_API_KEY)
-        return groq_client
-    except Exception as e:
-        st.error(f"Error initializing chatbot: {e}")
-        return None
-
-def get_chat_response(groq_client, user_message, extraction_data):
-    """Get response from Groq chatbot based on extraction data"""
-    try:
-        # Create context from extraction data
-        context = "Extracted data:\n"
-        if extraction_data:
-            for item in extraction_data:
-                if isinstance(item, dict):
-                    for key, value in item.items():
-                        if key not in ['Raw Output', 'Parse Error', 'Is Success', 'Is Error', 'Is Not Found', 'Is Rate Limit', 'Latency (s)', 'Exact Match', 'Case-Insensitive Match']:
-                            if value and value != 'NOT FOUND' and value != 'ERROR':
-                                context += f"{key}: {value}\n"
-        
-        if not context.strip() or context.strip() == "Extracted data:":
-            return "I don't have any extracted data to work with yet. Please complete the extraction process first."
-        
-        prompt = f"""You are a helpful assistant for LEONI parts data. You have access to the following extracted information:
-
-{context}
-
-User question: {user_message}
-
-Please provide a helpful and accurate response based on the extracted data. If the information is not available in the extracted data, please say so clearly. Be concise but informative."""
-        
-        response = groq_client.chat.completions.create(
-            model="qwen-qwq-32b",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=500
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        logger.error(f"Chatbot error: {e}")
-        return f"Sorry, I encountered an error while processing your request. Please try again."
 
 # --- Navigation Sidebar ---
 with st.sidebar:
@@ -607,14 +562,7 @@ if embedding_function is None or llm is None:
 
 # --- UI Layout ---
 # Blue band header with LEONI
-st.markdown(
-    """
-    <div class="header-band">
-        <h1>LEONI</h1>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+
 
 # Blue band header with LEONI
 st.markdown("""
@@ -737,7 +685,7 @@ with st.sidebar:
 
 # --- Main Layout with Two Columns ---
 # Initialize chatbot
-groq_client = initialize_chatbot()
+
 
 # Create two columns: left for extraction, right for results and chat
 left_col, right_col = st.columns([2, 1])
@@ -2180,72 +2128,5 @@ with right_col:
         st.info("📄 Upload and process documents to see extracted results here.")
     
     # Chatbot Section
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
-                    color: white; 
-                    padding: 1rem; 
-                    border-radius: 15px; 
-                    text-align: center; 
-                    margin: 2rem 0 1rem 0;">
-            <h3 style="margin: 0; font-size: 1.5em;">💬 Chat with Your Data</h3>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Initialize chat history
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    # Display chat history
-    if st.session_state.chat_history:
-        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-        for message in st.session_state.chat_history:
-            if message['role'] == 'user':
-                st.markdown(f"""
-                    <div class="chat-message user">
-                        <strong>You:</strong> {message['content']}
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                    <div class="chat-message assistant">
-                        <strong>Assistant:</strong> {message['content']}
-                    </div>
-                """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Chat input
-    if groq_client and st.session_state.evaluation_results:
-        user_message = st.text_input("Ask about your extracted data:", key="chat_input", placeholder="e.g., What is the part number?")
-        
-        if st.button("Send", key="send_chat"):
-            if user_message.strip():
-                # Add user message to history
-                st.session_state.chat_history.append({
-                    'role': 'user',
-                    'content': user_message
-                })
-                
-                # Get response from chatbot
-                with st.spinner("Thinking..."):
-                    response = get_chat_response(groq_client, user_message, st.session_state.evaluation_results)
-                
-                # Add assistant response to history
-                st.session_state.chat_history.append({
-                    'role': 'assistant',
-                    'content': response
-                })
-                
-                # Clear input and rerun to show new messages
-                st.rerun()
-    elif not groq_client:
-        st.warning("⚠️ Chatbot not available - API key missing")
-    elif not st.session_state.evaluation_results:
-        st.info("💬 Chat will be available once you extract data")
-    
-    # Clear chat button
-    if st.session_state.chat_history:
-        if st.button("🗑️ Clear Chat History", key="clear_chat"):
-            st.session_state.chat_history = []
-            st.rerun()
     
 
