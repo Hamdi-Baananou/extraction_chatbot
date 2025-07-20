@@ -1687,8 +1687,8 @@ else:
             return re.sub(clean, '', text)
 
         st.divider()
-        st.subheader("🗂️ Extracted Attributes (Click to Expand)")
-        # Display cards in a grid: 4 per row
+        st.subheader("🗂️ Extracted Attributes (4 per row)")
+        # Display cards in a grid: 4 per row, not collapsible
         results = [r for r in st.session_state.evaluation_results if isinstance(r, dict)]
         num_cols = 4
         for i in range(0, len(results), num_cols):
@@ -1706,14 +1706,13 @@ else:
                     is_not_found = result.get('Is Not Found', False)
 
                     card_status = 'success-true' if is_success else ('success-false' if is_error or is_not_found else '')
-                    with st.expander(f"{attr_name}"):
-                        st.markdown(f'''<div class=\"attribute-card\">
-                            <h4>{attr_name}</h4>
-                            <div class=\"attribute-value\">{value}</div>
-                            <div class=\"attribute-source\">Source: <b>{source}</b></div>
-                            <div class=\"attribute-source\">Processing Time: <b>{latency:.2f} s</b></div>
-                            <div class=\"attribute-source\">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
-                        </div>''', unsafe_allow_html=True)
+                    st.markdown(f'''<div class=\"attribute-card\">
+                        <h4>{attr_name}</h4>
+                        <div class=\"attribute-value\">{value}</div>
+                        <div class=\"attribute-source\">Source: <b>{source}</b></div>
+                        <div class=\"attribute-source\">Processing Time: <b>{latency:.2f} s</b></div>
+                        <div class=\"attribute-source\">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
+                    </div>''', unsafe_allow_html=True)
         # --- End Card-based UI ---
 
         st.divider()
