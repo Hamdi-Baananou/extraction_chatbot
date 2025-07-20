@@ -1678,14 +1678,40 @@ else:
             }, context={"step": "extraction_with_issues"})
             # st.rerun() # REMOVE/COMMENT OUT to keep cards visible (even on error)
 
+        # --- Card-based UI for Extracted Attributes ---
+        import re
+        def strip_html_tags(text):
+            if not isinstance(text, str):
+                return text
+            clean = re.compile('<.*?>')
+            return re.sub(clean, '', text)
 
-    # --- Block 2: Display Ground Truth / Metrics (if results exist) ---
-    # This part needs the 'Source' column re-added for display
-    if st.session_state.evaluation_results:
-        debug_logger.info("Displaying evaluation results", data={
-            "results_count": len(st.session_state.evaluation_results)
-        }, context={"step": "display_results"})
-        
+        st.divider()
+        st.subheader("🗂️ Extracted Attributes (Click to Expand)")
+        for result in st.session_state.evaluation_results:
+            if not isinstance(result, dict):
+                continue
+            attr_name = result.get('Prompt Name', 'Unknown Attribute')
+            value = result.get('Extracted Value', '')
+            source = result.get('Source', 'Unknown')
+            latency = result.get('Latency (s)', None)
+            raw_output = result.get('Raw Output', '')
+            raw_snippet = strip_html_tags(raw_output)[:300] + ("..." if raw_output and len(raw_output) > 300 else "")
+            is_success = result.get('Is Success', False)
+            is_error = result.get('Is Error', False)
+            is_not_found = result.get('Is Not Found', False)
+
+            card_status = 'success-true' if is_success else ('success-false' if is_error or is_not_found else '')
+            with st.expander(f"{attr_name}"):
+                st.markdown(f'''<div class="attribute-card">
+                    <h4>{attr_name}</h4>
+                    <div class="attribute-value">{value}</div>
+                    <div class="attribute-source">Source: <b>{source}</b></div>
+                    <div class="attribute-source">Processing Time: <b>{latency:.2f} s</b></div>
+                    <div class="attribute-source">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
+                </div>''', unsafe_allow_html=True)
+        # --- End Card-based UI ---
+
         st.divider()
         st.header("3. Enter Ground Truth & Evaluate")
 
@@ -1743,7 +1769,7 @@ else:
         # --- Mini Debug Widget ---
         from debug_interface import create_mini_debug_widget
         create_mini_debug_widget()
-        
+
         # --- Manual Recheck Section ---
         st.divider()
         st.subheader("🔄 Manual Attribute Recheck")
@@ -2062,40 +2088,6 @@ else:
     # This logic might need review depending on how Stage 1/2 errors are handled
     elif (st.session_state.pdf_chain or st.session_state.web_chain) and st.session_state.extraction_performed:
         st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
-
-        # --- Card-based UI for Extracted Attributes ---
-        import re
-        def strip_html_tags(text):
-            if not isinstance(text, str):
-                return text
-            clean = re.compile('<.*?>')
-            return re.sub(clean, '', text)
-
-        st.divider()
-        st.subheader("🗂️ Extracted Attributes (Click to Expand)")
-        for result in st.session_state.evaluation_results:
-            if not isinstance(result, dict):
-                continue
-            attr_name = result.get('Prompt Name', 'Unknown Attribute')
-            value = result.get('Extracted Value', '')
-            source = result.get('Source', 'Unknown')
-            latency = result.get('Latency (s)', None)
-            raw_output = result.get('Raw Output', '')
-            raw_snippet = strip_html_tags(raw_output)[:300] + ("..." if raw_output and len(raw_output) > 300 else "")
-            is_success = result.get('Is Success', False)
-            is_error = result.get('Is Error', False)
-            is_not_found = result.get('Is Not Found', False)
-
-            card_status = 'success-true' if is_success else ('success-false' if is_error or is_not_found else '')
-            with st.expander(f"{attr_name}"):
-                st.markdown(f'''<div class="attribute-card">
-                    <h4>{attr_name}</h4>
-                    <div class="attribute-value">{value}</div>
-                    <div class="attribute-source">Source: <b>{source}</b></div>
-                    <div class="attribute-source">Processing Time: <b>{latency:.2f} s</b></div>
-                    <div class="attribute-source">Raw Output Snippet:<br><code style='font-size:0.9em'>{raw_snippet}</code></div>
-                </div>''', unsafe_allow_html=True)
-        # --- End Card-based UI ---
 
 
     
