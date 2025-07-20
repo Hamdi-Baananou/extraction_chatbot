@@ -44,22 +44,22 @@ st.markdown(
     .header-band {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
         color: white;
-        padding: 0.7rem 0;
-        margin: -1rem -1rem 2rem -1rem;
+        padding: 0.1rem 0;
+        margin: 0 0 0.2rem 0;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.15);
     }
     
     .header-band h1 {
-        font-size: 2.2em;
+        font-size: 2em;
         margin: 0;
         font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     }
     
     .header-band h2 {
-        font-size: 1.8em;
-        margin: 0.5rem 0 0 0;
+        font-size: 1.2em;
+        margin: 0.1rem 0 0 0;
         font-weight: 300;
         opacity: 0.9;
     }
@@ -69,17 +69,17 @@ st.markdown(
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
         border: none;
-        border-radius: 10px;
-        padding: 12px 24px;
+        border-radius: 4px;
+        padding: 2px 8px;
         font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.2);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.08);
     }
     
     .stButton > button:hover {
         background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(30, 60, 114, 0.15);
     }
     
     /* Sidebar styling */
@@ -90,83 +90,93 @@ st.markdown(
     /* Section headers styling */
     .section-header {
         color: #1e3c72;
-        font-size: 2em;
-        margin-bottom: 1rem;
+        font-size: 1.2em;
+        margin-bottom: 0.2rem;
         font-weight: 600;
     }
     
     /* Info boxes styling */
     .stAlert {
-        border-left: 4px solid #1e3c72;
+        border-left: 2px solid #1e3c72;
+        padding: 0.1rem 0.2rem;
     }
     
     /* Success messages styling */
     .stSuccess {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
         border: 1px solid #1e3c72;
+        padding: 0.1rem 0.2rem;
     }
     
     /* Warning messages styling */
     .stWarning {
         background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
         border: 1px solid #1e3c72;
+        padding: 0.1rem 0.2rem;
     }
     
     /* Horizontal table styling */
     .horizontal-table {
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
-        margin: 1rem 0;
+        gap: 0.2rem;
+        margin: 0.2rem 0;
     }
     
     .attribute-card {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px solid #1e3c72;
-        border-radius: 12px;
-        padding: 1rem;
-        min-width: 300px;
-        flex: 1;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
-        transition: all 0.3s ease;
+        border: 1.5px solid #1e3c72;
+        border-radius: 4px;
+        padding: 0.1rem 0.2rem 0.2rem 0.2rem;
+        min-width: 0;
+        width: 100%;
+        box-shadow: 0 1px 3px rgba(30, 60, 114, 0.04);
+        margin: 0 0 0.2rem 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
     }
     
     .attribute-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(30, 60, 114, 0.08);
     }
     
     .attribute-card h4 {
         color: #1e3c72;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.1em;
-        font-weight: 600;
-        border-bottom: 2px solid #1e3c72;
-        padding-bottom: 0.5rem;
+        margin: 0 0 0.1rem 0;
+        font-size: 1em;
+        font-weight: 700;
+        border-bottom: 1px solid #1e3c72;
+        padding-bottom: 0.1rem;
+        width: 100%;
     }
     
     .attribute-value {
-        background: white;
+        background: #fff;
         border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 0.5rem;
-        margin: 0.5rem 0;
+        border-radius: 3px;
+        padding: 0.1rem 0.2rem;
+        margin: 0.05rem 0 0 0;
         font-weight: 500;
+        font-size: 0.95em;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .attribute-source {
-        font-size: 0.8em;
+        font-size: 0.7em;
         color: #6c757d;
         font-style: italic;
-        margin-top: 0.5rem;
+        margin-top: 0.1rem;
     }
     
     .success-indicator {
         display: inline-block;
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        margin-right: 0.5rem;
+        margin-right: 0.2rem;
     }
     
     .success-true {
@@ -179,54 +189,55 @@ st.markdown(
     
     /* Data editor styling */
     .stDataFrame {
-        border-radius: 10px;
+        border-radius: 4px;
         overflow: hidden;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.05);
+        padding: 0.1rem;
     }
     
     /* Metrics styling */
     .metric-card {
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border: 2px solid #1e3c72;
-        border-radius: 10px;
-        padding: 1rem;
+        border: 1.5px solid #1e3c72;
+        border-radius: 4px;
+        padding: 0.2rem;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.05);
     }
     
     .metric-value {
-        font-size: 2em;
+        font-size: 1.2em;
         font-weight: bold;
         color: #1e3c72;
-        margin: 0.5rem 0;
+        margin: 0.1rem 0;
     }
     
     .metric-label {
         color: #6c757d;
-        font-size: 0.9em;
-        margin-bottom: 0.5rem;
+        font-size: 0.8em;
+        margin-bottom: 0.1rem;
     }
     
     /* Right pane styling */
     .right-pane {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-left: 3px solid #1e3c72;
-        border-radius: 0 15px 15px 0;
-        padding: 1.5rem;
-        box-shadow: -5px 0 15px rgba(30, 60, 114, 0.1);
+        border-left: 2px solid #1e3c72;
+        border-radius: 0 8px 8px 0;
+        padding: 0.2rem;
+        box-shadow: -2px 0 6px rgba(30, 60, 114, 0.04);
         max-height: 90vh;
         overflow-y: auto;
     }
     
     /* Chat container styling */
     .chat-container {
-        max-height: 400px;
+        max-height: 300px;
         overflow-y: auto;
-        padding: 1rem;
+        padding: 0.2rem;
         background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
-        margin-bottom: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.04);
+        margin-bottom: 0.2rem;
     }
     
     /* Chatbot styling */
