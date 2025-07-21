@@ -92,14 +92,7 @@ def main():
             margin-bottom: 2rem;
         }
         body .block-container, .main .block-container {
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.5rem !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-            max-width: 100vw !important;
-            width: 100vw !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
+            /* Removed forced padding and width, revert to Streamlit default */
         }
         </style>""",
         unsafe_allow_html=True
