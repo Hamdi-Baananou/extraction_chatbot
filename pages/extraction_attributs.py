@@ -1684,7 +1684,7 @@ else:
         st.subheader("🗂️ Extracted Attributes (Compact Grid)")
         # Display cards in a responsive grid: up to 4 per row, only name and value
         results = [r for r in st.session_state.evaluation_results if isinstance(r, dict)]
-        num_cols = 4
+        num_cols = 5
         for i in range(0, len(results), num_cols):
             row_results = results[i:i+num_cols]
             cols = st.columns(min(len(row_results), num_cols))
