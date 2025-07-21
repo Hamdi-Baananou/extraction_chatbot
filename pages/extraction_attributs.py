@@ -1741,15 +1741,20 @@ else:
                     "Select attributes to recheck:",
                     options=manual_recheck_candidates,
                     default=manual_recheck_candidates[:3],
-                    help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
+                    help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones.",
+                    key="manual_recheck_multiselect"
                 )
                 part_number = st.session_state.get("part_number_input", "").strip()
-                if selected_for_recheck:
-                    if st.button("🔄 Run Manual Recheck", type="primary"):
-                        st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
-                        # ... existing code ...
-                else:
+                # Use a unique key for the button
+                manual_recheck_clicked = st.button("🔄 Run Manual Recheck", type="primary", key="manual_recheck_button")
+                if selected_for_recheck and manual_recheck_clicked:
+                    st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
+                    # TODO: Implement the actual manual recheck logic here.
+                    # For now, just display a placeholder message and do not modify st.session_state.evaluation_results.
+                    st.warning("Manual recheck logic not yet implemented. Results will update here when available.")
+                elif not selected_for_recheck:
                     st.info("Select at least one attribute to enable manual recheck.")
+                # Always display the last results from session state below
             else:
                 st.success("All attributes have been successfully extracted! No manual recheck needed.")
             # --- Export Section ---
