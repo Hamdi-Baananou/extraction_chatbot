@@ -31,8 +31,8 @@ def main():
         .header-band {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             color: white;
-            padding: 2rem 0;
-            margin: -1rem -1rem 2rem -1rem;
+            padding: 0.5rem 0;
+            margin: 0 0 1rem 0;
             text-align: center;
             box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
         }
@@ -77,7 +77,7 @@ def main():
         /* Welcome section styling */
         .welcome-section {
             text-align: center;
-            padding: 3rem 0;
+            padding: 1rem 0;
         }
         
         .welcome-section h2 {
@@ -90,6 +90,12 @@ def main():
             color: #2a5298;
             font-size: 1.3em;
             margin-bottom: 2rem;
+        }
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
         </style>""",
         unsafe_allow_html=True
