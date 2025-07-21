@@ -31,8 +31,8 @@ def main():
         .header-band {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             color: white;
-            padding: 0.5rem 0;
-            margin: 0 0 1rem 0;
+            padding: 2rem 0;
+            margin: -1rem -1rem 2rem -1rem;
             text-align: center;
             box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
         }

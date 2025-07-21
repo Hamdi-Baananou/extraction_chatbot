@@ -1,3 +1,6 @@
+import streamlit as st
+st.set_page_config(page_title="PDF Attribute Extraction", layout="wide")
+
 from loguru import logger
 import sys
 logger.remove()
@@ -14,7 +17,6 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from debug_logger import debug_logger, DebugTimer, log_streamlit_state, log_json_parsing
 debug_logger.info("Extraction page loaded", context={"page": "extraction_attributs"})
 
-import streamlit as st
 import os
 import time
 from loguru import logger
