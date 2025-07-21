@@ -96,6 +96,9 @@ def main():
             padding-bottom: 1rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
+            max-width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
         </style>""",
         unsafe_allow_html=True
