@@ -31,10 +31,12 @@ def main():
         .header-band {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             color: white;
-            padding: 2rem 0;
-            margin: -1rem -1rem 2rem -1rem;
+            padding: 1.5rem 2rem;
+            margin: 2rem auto 2rem auto;
+            max-width: 1100px;
             text-align: center;
             box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+            border-radius: 12px;
         }
         
         .header-band h1 {
