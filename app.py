@@ -28,20 +28,20 @@ def main():
         [data-testid="stSidebarNav"] {display: none;}
         
         /* Blue band header styling */
-    .header-band {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
-        color: white;
-        padding: 0.7rem 0;
-        margin: -1rem -1rem 2rem -1rem;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
-    }
-    .header-band h1 {
-        font-size: 2.2em;
-        margin: 0;
-        font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
+        .header-band {
+           background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
+           color: white;
+           padding: 0.7rem 0;
+           margin: -1rem -1rem 2rem -1rem;
+           text-align: center;
+           box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+        .header-band h1 {
+            font-size: 2.2em;
+            margin: 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
         .header-band h2 {
             font-size: 1.8em;
             margin: 0.5rem 0 0 0;
