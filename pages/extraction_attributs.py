@@ -1700,105 +1700,90 @@ else:
 
         st.divider()
 
-        # --- Manual Recheck Section ---
-        st.divider()
-        st.subheader("🔄 Manual Attribute Recheck")
-        
-        # Help section
-        with st.expander("ℹ️ How to use Manual Recheck"):
-            st.markdown("""
-            **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
+        # --- Main Extraction UI ---
+        if st.session_state.get("evaluation_results"):
+            # --- Manual Recheck Section ---
+            st.divider()
+            st.subheader("🔄 Manual Attribute Recheck")
             
-            1. **Select attributes** from the dropdown below
-            2. **Click "Run Manual Recheck"** button
-            3. **Wait for results** - each attribute will be rechecked with enhanced prompts
-            4. **Review results** - successful extractions will show green checkmarks
-            
-            **When to use:**
-            - Attributes that returned "NOT FOUND"
-            - Attributes that returned "none" (might be incorrect)
-            - Attributes with errors or unexpected formats
-            - Any attribute you suspect might have been missed
-            
-            **What happens:**
-            - Uses more document chunks (15 instead of 8-12)
-            - Enhanced prompts specifically for rechecking
-            - Preserves original "none" values if recheck confirms they're correct
-            """)
-        
-        # Get attributes that might need manual recheck
-        manual_recheck_candidates = []
-        for result in st.session_state.evaluation_results:
-            if isinstance(result, dict):
-                manual_recheck_candidates.append(result.get('Prompt Name', ''))
-        
-        if manual_recheck_candidates:
-            none_candidates = []
-            other_candidates = []
+            with st.expander("ℹ️ How to use Manual Recheck"):
+                st.markdown("""
+                **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
+                1. **Select attributes** from the dropdown below
+                2. **Click "Run Manual Recheck"** button
+                3. **Wait for results** - each attribute will be rechecked with enhanced prompts
+                4. **Review results** - successful extractions will show green checkmarks
+                **When to use:**
+                - Attributes that returned "NOT FOUND"
+                - Attributes that returned "none" (might be incorrect)
+                - Attributes with errors or unexpected formats
+                - Any attribute you suspect might have been missed
+                **What happens:**
+                - Uses more document chunks (15 instead of 8-12)
+                - Enhanced prompts specifically for rechecking
+                - Preserves original "none" values if recheck confirms they're correct
+                """)
+            manual_recheck_candidates = []
             for result in st.session_state.evaluation_results:
-                if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
-                    extracted_value = result.get('Extracted Value', '')
-                    if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
-                        none_candidates.append(result.get('Prompt Name'))
-                    else:
-                        other_candidates.append(result.get('Prompt Name'))
-            selected_for_recheck = st.multiselect(
-                "Select attributes to recheck:",
-                options=manual_recheck_candidates,
-                default=manual_recheck_candidates[:3],
-                help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
-            )
-            part_number = st.session_state.get("part_number_input", "").strip()
-            if selected_for_recheck:
-                if st.button("🔄 Run Manual Recheck", type="primary"):
-                    st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
-                    # ... existing code ...
+                if isinstance(result, dict):
+                    manual_recheck_candidates.append(result.get('Prompt Name', ''))
+            if manual_recheck_candidates:
+                none_candidates = []
+                other_candidates = []
+                for result in st.session_state.evaluation_results:
+                    if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
+                        extracted_value = result.get('Extracted Value', '')
+                        if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
+                            none_candidates.append(result.get('Prompt Name'))
+                        else:
+                            other_candidates.append(result.get('Prompt Name'))
+                selected_for_recheck = st.multiselect(
+                    "Select attributes to recheck:",
+                    options=manual_recheck_candidates,
+                    default=manual_recheck_candidates[:3],
+                    help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
+                )
+                part_number = st.session_state.get("part_number_input", "").strip()
+                if selected_for_recheck:
+                    if st.button("🔄 Run Manual Recheck", type="primary"):
+                        st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
+                        # ... existing code ...
+                else:
+                    st.info("Select at least one attribute to enable manual recheck.")
             else:
-                st.info("Select at least one attribute to enable manual recheck.")
-        else:
-            if st.session_state.evaluation_results:
                 st.success("All attributes have been successfully extracted! No manual recheck needed.")
+            # --- Export Section ---
+            st.divider()
+            st.header("6. Export Results")
+            if st.session_state.evaluation_results:
+                export_df = pd.DataFrame(st.session_state.evaluation_results)
+                export_summary = st.session_state.evaluation_metrics if st.session_state.evaluation_metrics else {}
+                @st.cache_data
+                def convert_df_to_csv(df):
+                    return df.to_csv(index=False).encode('utf-8')
+                csv_data = convert_df_to_csv(export_df)
+                json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
+                export_cols = st.columns(2)
+                with export_cols[0]:
+                    st.download_button(
+                        label="📥 Download Detailed Results (CSV)",
+                        data=csv_data,
+                        file_name='detailed_extraction_results.csv',
+                        mime='text/csv',
+                        key='download_csv'
+                    )
+                with export_cols[1]:
+                    st.download_button(
+                        label="📥 Download Summary Metrics (JSON)",
+                        data=json_summary_data,
+                        file_name='evaluation_summary.json',
+                        mime='application/json',
+                        key='download_json'
+                    )
             else:
-                st.info("No extraction results available. Please process documents first.")
-
-        # --- Export Section --- 
-        st.divider()
-        st.header("6. Export Results")
-
-        if st.session_state.evaluation_results:
-            # Prepare data for export
-            export_df = pd.DataFrame(st.session_state.evaluation_results)
-            export_summary = st.session_state.evaluation_metrics if st.session_state.evaluation_metrics else {}
-
-            # Convert DataFrame to CSV
-            @st.cache_data # Cache the conversion
-            def convert_df_to_csv(df):
-                return df.to_csv(index=False).encode('utf-8')
-
-            csv_data = convert_df_to_csv(export_df)
-
-            # Convert summary dict to JSON
-            json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
-
-            export_cols = st.columns(2)
-            with export_cols[0]:
-                st.download_button(
-                    label="📥 Download Detailed Results (CSV)",
-                    data=csv_data,
-                    file_name='detailed_extraction_results.csv',
-                    mime='text/csv',
-                    key='download_csv'
-                )
-            with export_cols[1]:
-                 st.download_button(
-                    label="📥 Download Summary Metrics (JSON)",
-                    data=json_summary_data,
-                    file_name='evaluation_summary.json',
-                    mime='application/json',
-                    key='download_json'
-                )
+                st.info("Process documents and calculate metrics to enable export.")
         else:
-            st.info("Process documents and calculate metrics to enable export.")
+            st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
 
     # --- Block 3: Handle cases where extraction ran but yielded nothing, or hasn't run ---
     # This logic might need review depending on how Stage 1/2 errors are handled
