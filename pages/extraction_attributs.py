@@ -1744,10 +1744,6 @@ else:
                     else:
                         other_candidates.append(result.get('Prompt Name'))
             
-            st.info(f"You can recheck any of the {len(manual_recheck_candidates)} attributes below.")
-            if none_candidates:
-                st.warning(f"⚠️ {len(none_candidates)} of these returned 'none' responses and may contain missed values.")
-            
             # Allow user to select specific attributes for recheck
             selected_for_recheck = st.multiselect(
                 "Select attributes to recheck:",
