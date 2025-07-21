@@ -1675,7 +1675,7 @@ else:
             }
             /* Remove extra margin between columns */
             .element-container .stColumn > div {
-                margin-right: 0 !important;
+                /* Removed forced margin, revert to Streamlit default */
             }
             </style>
             """,
