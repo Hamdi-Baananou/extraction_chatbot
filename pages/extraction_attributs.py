@@ -1077,7 +1077,6 @@ else:
                 intermediate_results[prompt_name] = {
                     'Prompt Name': prompt_name,
                     'Extracted Value': final_answer_value, # Store Stage 1 value/error/NOT FOUND
-                    'Ground Truth': '',
                     'Source': source,
                     'Raw Output': raw_output,
                     'Parse Error': str(parse_error) if parse_error else None,
@@ -1116,7 +1115,6 @@ else:
                  intermediate_results[prompt_name] = {
                     'Prompt Name': prompt_name,
                     'Extracted Value': "(Web Stage Skipped)", 
-                    'Ground Truth': '',
                     'Source': 'Pending',
                     'Raw Output': 'N/A',
                     'Parse Error': None,
@@ -1700,58 +1698,6 @@ else:
                     </div>''', unsafe_allow_html=True)
 
         st.divider()
-        st.header("3. Enter Ground Truth & Evaluate")
-
-        results_df = pd.DataFrame(st.session_state.evaluation_results)
-        
-        debug_logger.data_transformation(
-            "Results DataFrame creation",
-            st.session_state.evaluation_results,
-            results_df.to_dict('records'),
-            context={"step": "results_dataframe_created"}
-        )
-        
-        if 'Source' not in results_df.columns:
-             results_df['Source'] = 'Unknown' # Add placeholder if missing
-             debug_logger.warning("Source column missing, added placeholder", context={"step": "source_column_fixed"})
-
-        st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
-
-        disabled_cols = [col for col in results_df.columns if col != 'Ground Truth']
-        column_order = [ # Add Source back
-            'Prompt Name', 'Extracted Value', 'Ground Truth', 'Source',
-            'Is Success', 'Is Error', 'Is Not Found', 'Is Rate Limit',
-            'Latency (s)', 'Exact Match', 'Case-Insensitive Match'
-        ]
-
-        edited_df = st.data_editor(
-            results_df,
-            key="gt_editor",
-            use_container_width=True,
-            num_rows="dynamic",
-            disabled=disabled_cols,
-            column_order=column_order,
-            column_config={ # Add Source back
-                 "Prompt Name": st.column_config.TextColumn(width="medium"),
-                 "Extracted Value": st.column_config.TextColumn(width="medium"),
-                 "Ground Truth": st.column_config.TextColumn(width="medium", help="Enter the correct value here"),
-                 "Source": st.column_config.TextColumn(width="small"), # Show source
-                 "Is Success": st.column_config.CheckboxColumn("Success?", width="small"),
-                 "Is Error": st.column_config.CheckboxColumn("Error?", width="small"),
-                 "Is Not Found": st.column_config.CheckboxColumn("Not Found?", width="small"),
-                 "Is Rate Limit": st.column_config.CheckboxColumn("Rate Limit?", width="small"),
-                 "Latency (s)": st.column_config.NumberColumn(format="%.2f", width="small"),
-                 "Exact Match": st.column_config.CheckboxColumn("Exact?", width="small"),
-                 "Case-Insensitive Match": st.column_config.CheckboxColumn("Case-Ins?", width="small"),
-                 "Raw Output": None,
-                 "Parse Error": None
-            }
-        )
-        
-        debug_logger.user_action("Data editor displayed", data={
-            "df_shape": edited_df.shape,
-            "columns": list(edited_df.columns)
-        }, context={"step": "data_editor_displayed"})
 
         # --- Mini Debug Widget ---
         from debug_interface import create_mini_debug_widget
