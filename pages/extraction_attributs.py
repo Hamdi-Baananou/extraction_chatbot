@@ -1756,144 +1756,150 @@ else:
             # --- Ensure part_number is defined for manual recheck ---
             part_number = st.session_state.get("part_number_input", "").strip()
             
-            if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
-                st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
-                
-                # Run manual recheck
-                for prompt_name in selected_for_recheck:
-                    attribute_key = prompt_name
-                    pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+            if selected_for_recheck:
+                if st.button("🔄 Run Manual Recheck", type="primary"):
+                    st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
                     
-                    with st.spinner(f"Manual recheck for {attribute_key}..."):
-                        try:
-                            start_time = time.time()
-                            
-                            # Use even more chunks for manual recheck
-                            context_chunks = fetch_chunks(
-                                st.session_state.retriever,
-                                part_number,
-                                attribute_key,
-                                k=15  # Increased for thorough manual recheck
-                            )
-                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
-                            
-                            # Enhanced prompt for manual recheck
-                            # Check if this attribute previously returned "none" or similar
-                            previous_value = None
-                            for result in st.session_state.evaluation_results:
-                                if result.get('Prompt Name') == prompt_name:
-                                    previous_value = result.get('Extracted Value', '')
-                                    break
-                            
-                            # Customize manual recheck prompt based on previous result
-                            if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
-                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK - CRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value. This is a manual recheck request - be exhaustive in your search."
-                            else:
-                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context."
-                            
-                            manual_recheck_input = {
-                                "context": context_text,
-                                "extraction_instructions": manual_instruction,
-                                "attribute_key": attribute_key,
-                                "part_number": part_number if part_number else "Not Provided"
-                            }
-                            
-                            json_result_str = loop.run_until_complete(
-                                _invoke_chain_and_process(st.session_state.pdf_chain, manual_recheck_input, f"{attribute_key} (Manual Recheck)")
-                            )
-                            run_time = time.time() - start_time
-                            
-                            # Parse result
-                            final_answer_value = "Error"
-                            parse_error = None
-                            raw_output = json_result_str if json_result_str else '{"error": "Manual recheck did not run"}'
-                            
+                    # Run manual recheck
+                    for prompt_name in selected_for_recheck:
+                        attribute_key = prompt_name
+                        pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+                        
+                        with st.spinner(f"Manual recheck for {attribute_key}..."):
                             try:
-                                string_to_parse = raw_output.strip()
-                                parsed_json = extract_json_from_string(string_to_parse)
+                                start_time = time.time()
                                 
-                                if isinstance(parsed_json, dict) and attribute_key in parsed_json:
-                                    parsed_value = str(parsed_json[attribute_key])
-                                    if (parsed_value.strip() == "" or 
-                                        "not found" in parsed_value.lower() or
-                                        parsed_value.lower() in ["none", "null", "n/a", "na"]):
-                                        final_answer_value = "NOT FOUND (Manual)"
-                                    else:
-                                        final_answer_value = parsed_value
-                                        st.success(f"Manual recheck successful for '{attribute_key}': {parsed_value}")
-                                elif isinstance(parsed_json, dict) and "error" in parsed_json:
-                                    final_answer_value = f"Error: {parsed_json['error'][:100]}"
-                                    parse_error = ValueError(f"Manual Recheck Error: {parsed_json['error']}")
+                                # Use even more chunks for manual recheck
+                                context_chunks = fetch_chunks(
+                                    st.session_state.retriever,
+                                    part_number,
+                                    attribute_key,
+                                    k=15  # Increased for thorough manual recheck
+                                )
+                                context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                                
+                                # Enhanced prompt for manual recheck
+                                # Check if this attribute previously returned "none" or similar
+                                previous_value = None
+                                for result in st.session_state.evaluation_results:
+                                    if result.get('Prompt Name') == prompt_name:
+                                        previous_value = result.get('Extracted Value', '')
+                                        break
+                                
+                                # Customize manual recheck prompt based on previous result
+                                if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
+                                    manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK - CRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value. This is a manual recheck request - be exhaustive in your search."
                                 else:
-                                    final_answer_value = "Unexpected JSON Format (Manual)"
-                                    parse_error = ValueError(f"Manual Recheck Unexpected JSON format")
+                                    manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context."
+                                
+                                manual_recheck_input = {
+                                    "context": context_text,
+                                    "extraction_instructions": manual_instruction,
+                                    "attribute_key": attribute_key,
+                                    "part_number": part_number if part_number else "Not Provided"
+                                }
+                                
+                                json_result_str = loop.run_until_complete(
+                                    _invoke_chain_and_process(st.session_state.pdf_chain, manual_recheck_input, f"{attribute_key} (Manual Recheck)")
+                                )
+                                run_time = time.time() - start_time
+                                
+                                # Parse result
+                                final_answer_value = "Error"
+                                parse_error = None
+                                raw_output = json_result_str if json_result_str else '{"error": "Manual recheck did not run"}'
+                                
+                                try:
+                                    string_to_parse = raw_output.strip()
+                                    parsed_json = extract_json_from_string(string_to_parse)
                                     
-                            except Exception as processing_exc:
-                                parse_error = processing_exc
-                                final_answer_value = "Processing Error (Manual)"
-                            
-                            # Update the result
-                            for i, result in enumerate(st.session_state.evaluation_results):
-                                if result.get('Prompt Name') == prompt_name:
-                                    previous_latency = result.get('Latency (s)', 0.0)
-                                    total_latency = previous_latency + round(run_time, 2)
-                                    
-                                    # Check if we should preserve the original value (rollback logic)
-                                    original_value = result.get('Extracted Value', '')
-                                    original_source = result.get('Source', 'Unknown')
-                                    
-                                    # Rollback conditions: preserve original value if manual recheck failed
-                                    should_rollback = (
-                                        # Preserve "none" values when confirmed by recheck
-                                        (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Manual)") or
-                                        # Rollback to original when manual recheck has errors
-                                        bool(parse_error) or
-                                        final_answer_value in ["Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
-                                    )
-                                    
-                                    # Determine final value
-                                    if should_rollback:
-                                        final_display_value = original_value  # Keep original value
-                                        final_source = original_source  # Keep original source
-                                        is_success = result.get('Is Success', False)  # Keep original success status
-                                        is_not_found = result.get('Is Not Found', False)  # Keep original not found status
-                                        is_error = result.get('Is Error', False)  # Keep original error status
+                                    if isinstance(parsed_json, dict) and attribute_key in parsed_json:
+                                        parsed_value = str(parsed_json[attribute_key])
+                                        if (parsed_value.strip() == "" or 
+                                            "not found" in parsed_value.lower() or
+                                            parsed_value.lower() in ["none", "null", "n/a", "na"]):
+                                            final_answer_value = "NOT FOUND (Manual)"
+                                        else:
+                                            final_answer_value = parsed_value
+                                            st.success(f"Manual recheck successful for '{attribute_key}': {parsed_value}")
+                                    elif isinstance(parsed_json, dict) and "error" in parsed_json:
+                                        final_answer_value = f"Error: {parsed_json['error'][:100]}"
+                                        parse_error = ValueError(f"Manual Recheck Error: {parsed_json['error']}")
                                     else:
-                                        final_display_value = final_answer_value
-                                        final_source = 'Manual Recheck'
-                                        is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
-                                        is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
-                                        is_error = bool(parse_error)
-                                    
-                                    st.session_state.evaluation_results[i].update({
-                                        'Extracted Value': final_display_value,
-                                        'Source': final_source,
-                                        'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
-                                        'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
-                                        'Is Success': is_success,
-                                        'Is Error': is_error,
-                                        'Is Not Found': is_not_found,
-                                        'Is Rate Limit': False,
-                                        'Latency (s)': total_latency
-                                    })
-                                    
-                                    # Show feedback for rollback
-                                    if should_rollback and bool(parse_error):
-                                        st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
-                                    elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
-                                        st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
-                                    break
-                            
-                            time.sleep(0.5)  # Brief delay between manual rechecks
-                            
-                        except Exception as e:
-                            st.error(f"Error during manual recheck for '{attribute_key}': {e}")
-                            logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
-                
-                st.success("Manual recheck completed!")
-                st.rerun()  # Refresh to show updated results
+                                        final_answer_value = "Unexpected JSON Format (Manual)"
+                                        parse_error = ValueError(f"Manual Recheck Unexpected JSON format")
+                                        
+                                except Exception as processing_exc:
+                                    parse_error = processing_exc
+                                    final_answer_value = "Processing Error (Manual)"
+                                
+                                # Update the result
+                                for i, result in enumerate(st.session_state.evaluation_results):
+                                    if result.get('Prompt Name') == prompt_name:
+                                        previous_latency = result.get('Latency (s)', 0.0)
+                                        total_latency = previous_latency + round(run_time, 2)
+                                        
+                                        # Check if we should preserve the original value (rollback logic)
+                                        original_value = result.get('Extracted Value', '')
+                                        original_source = result.get('Source', 'Unknown')
+                                        
+                                        # Rollback conditions: preserve original value if manual recheck failed
+                                        should_rollback = (
+                                            # Preserve "none" values when confirmed by recheck
+                                            (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Manual)") or
+                                            # Rollback to original when manual recheck has errors
+                                            bool(parse_error) or
+                                            final_answer_value in ["Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                        )
+                                        
+                                        # Determine final value
+                                        if should_rollback:
+                                            final_display_value = original_value  # Keep original value
+                                            final_source = original_source  # Keep original source
+                                            is_success = result.get('Is Success', False)  # Keep original success status
+                                            is_not_found = result.get('Is Not Found', False)  # Keep original not found status
+                                            is_error = result.get('Is Error', False)  # Keep original error status
+                                        else:
+                                            final_display_value = final_answer_value
+                                            final_source = 'Manual Recheck'
+                                            is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                            is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
+                                            is_error = bool(parse_error)
+                                        
+                                        st.session_state.evaluation_results[i].update({
+                                            'Extracted Value': final_display_value,
+                                            'Source': final_source,
+                                            'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
+                                            'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
+                                            'Is Success': is_success,
+                                            'Is Error': is_error,
+                                            'Is Not Found': is_not_found,
+                                            'Is Rate Limit': False,
+                                            'Latency (s)': total_latency
+                                        })
+                                        
+                                        # Show feedback for rollback
+                                        if should_rollback and bool(parse_error):
+                                            st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
+                                        elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
+                                            st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
+                                        break
+                                
+                                time.sleep(0.5)  # Brief delay between manual rechecks
+                                
+                            except Exception as e:
+                                st.error(f"Error during manual recheck for '{attribute_key}': {e}")
+                                logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
+                    
+                    st.success("Manual recheck completed!")
+                    st.rerun()  # Refresh to show updated results
+            else:
+                st.info("Select at least one attribute to enable manual recheck.")
         else:
-            st.success("All attributes have been successfully extracted! No manual recheck needed.")
+            if st.session_state.evaluation_results:
+                st.success("All attributes have been successfully extracted! No manual recheck needed.")
+            else:
+                st.info("No extraction results available. Please process documents first.")
 
         # --- Export Section --- 
         st.divider()
