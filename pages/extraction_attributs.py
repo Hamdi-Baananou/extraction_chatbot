@@ -1704,9 +1704,6 @@ else:
         st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
 
         # --- CARD UI REPLACEMENT FOR GROUND TRUTH ---
-        if 'ground_truth_inputs' not in st.session_state:
-            st.session_state.ground_truth_inputs = {}
-
         for idx, result in enumerate(st.session_state.evaluation_results):
             prompt_name = result.get('Prompt Name', f'Field {idx+1}')
             extracted_value = result.get('Extracted Value', '')
@@ -1715,8 +1712,6 @@ else:
             is_error = result.get('Is Error', False)
             is_not_found = result.get('Is Not Found', False)
             latency = result.get('Latency (s)', 0.0)
-
-            gt_key = f"gt_input_{idx}"
 
             st.markdown(f"""
             <div style=\"background: #f8f9fa; border: 2px solid #1e3c72; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);\">
@@ -1730,22 +1725,8 @@ else:
                     {"⚠️" if is_not_found else ""}
                     <span style=\"margin-left: 1em; color: #888;\">Latency: {latency:.2f}s</span>
                 </div>
+            </div>
             """, unsafe_allow_html=True)
-
-            gt_value = st.text_input(
-                f"Ground Truth for {prompt_name}",
-                value=st.session_state.ground_truth_inputs.get(gt_key, ""),
-                key=gt_key
-            )
-            st.session_state.ground_truth_inputs[gt_key] = gt_value
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        if st.button("Save Ground Truth"):
-            for idx, result in enumerate(st.session_state.evaluation_results):
-                gt_key = f"gt_input_{idx}"
-                result['Ground Truth'] = st.session_state.ground_truth_inputs.get(gt_key, "")
-            st.success("Ground truth values saved!")
         # --- END CARD UI REPLACEMENT ---
         # --- Mini Debug Widget ---
         from debug_interface import create_mini_debug_widget
