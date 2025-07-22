@@ -691,7 +691,7 @@ with st.sidebar:
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
-    st.header("2. Extracted Information")
+    pass
 
 # --- Get current asyncio event loop --- 
 # Needed for both scraping and running the async extraction chain
