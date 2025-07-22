@@ -1727,11 +1727,11 @@ else:
                 st.markdown(f"""
                 <div class='result-item'>
                     <div class='result-label'>🔍 {prompt_name}</div>
-                    <div style='display:flex; align-items:center; gap:0.5em;'>
-                        <div class='result-value' title='{extracted_value}' style='margin-bottom:0;'>
+                    <div class='result-value' title='{extracted_value}' style='position:relative; display:flex; align-items:center;'>
+                        <span style='flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;'>
                             {extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}
-                        </div>
-                        <span style='display:inline-block; width:14px; height:14px; border-radius:50%; background:{circle_color}; margin-left:0.2em;'></span>
+                        </span>
+                        <span style='position:absolute; right:8px; top:50%; transform:translateY(-50%); display:inline-block; width:14px; height:14px; border-radius:50%; background:{circle_color};'></span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
