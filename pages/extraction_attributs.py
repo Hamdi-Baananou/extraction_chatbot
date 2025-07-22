@@ -1712,19 +1712,30 @@ else:
                 prompt_name = result.get('Prompt Name', f'Field {idx+1}')
                 extracted_value = result.get('Extracted Value', '')
                 source = result.get('Source', '')
-                is_success = result.get('Is Success', False)
-                is_error = result.get('Is Error', False)
-                is_not_found = result.get('Is Not Found', False)
-                latency = result.get('Latency (s)', 0.0)
+
+                # Determine chip color and label
+                source_label = str(source).strip().lower()
+                if source_label == 'web':
+                    chip_color = '#28a745'  # green
+                    chip_text = 'Web'
+                elif source_label == 'numind':
+                    chip_color = '#007bff'  # blue
+                    chip_text = 'NuMind'
+                elif source_label == 'pdf':
+                    chip_color = '#ffc107'  # yellow
+                    chip_text = 'PDF'
+                else:
+                    chip_color = '#6c757d'  # gray
+                    chip_text = source if source else 'Unknown'
 
                 st.markdown(f"""
                 <div class='result-item'>
                     <div class='result-label'>🔍 {prompt_name}</div>
                     <div class='result-value' title='{extracted_value}'>{extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}</div>
-                    <div style='font-size:0.9em; color:#666; margin-top:0.5em;'>
-                        <b>Source:</b> {source} &nbsp;|
-                        <b>Status:</b> {('✅' if is_success else '')}{('❌' if is_error else '')}{('⚠️' if is_not_found else '')} &nbsp;|
-                        <span>Latency: {latency:.2f}s</span>
+                    <div style='margin-top:0.7em;'>
+                        <span style='display:inline-block; padding:0.3em 1.2em; border-radius:999px; background:{chip_color}; color:white; font-weight:600; font-size:0.95em;'>
+                            {chip_text}
+                        </span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
