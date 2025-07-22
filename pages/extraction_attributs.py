@@ -1713,29 +1713,25 @@ else:
                 extracted_value = result.get('Extracted Value', '')
                 source = result.get('Source', '')
 
-                # Determine chip color and label
+                # Determine circle color
                 source_label = str(source).strip().lower()
                 if source_label == 'web':
-                    chip_color = '#28a745'  # green
-                    chip_text = 'Web'
+                    circle_color = '#28a745'  # green
                 elif source_label == 'numind':
-                    chip_color = '#007bff'  # blue
-                    chip_text = 'NuMind'
+                    circle_color = '#007bff'  # blue
                 elif source_label == 'pdf':
-                    chip_color = '#ffc107'  # yellow
-                    chip_text = 'PDF'
+                    circle_color = '#ffc107'  # yellow
                 else:
-                    chip_color = '#6c757d'  # gray
-                    chip_text = source if source else 'Unknown'
+                    circle_color = '#6c757d'  # gray
 
                 st.markdown(f"""
                 <div class='result-item'>
                     <div class='result-label'>🔍 {prompt_name}</div>
-                    <div class='result-value' title='{extracted_value}'>{extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}</div>
-                    <div style='margin-top:0.7em;'>
-                        <span style='display:inline-block; padding:0.3em 1.2em; border-radius:999px; background:{chip_color}; color:white; font-weight:600; font-size:0.95em;'>
-                            {chip_text}
-                        </span>
+                    <div style='display:flex; align-items:center; gap:0.5em;'>
+                        <div class='result-value' title='{extracted_value}' style='margin-bottom:0;'>
+                            {extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}
+                        </div>
+                        <span style='display:inline-block; width:14px; height:14px; border-radius:50%; background:{circle_color}; margin-left:0.2em;'></span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
