@@ -1703,359 +1703,56 @@ else:
 
         st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
 
-        disabled_cols = [col for col in results_df.columns if col != 'Ground Truth']
-        column_order = [ # Add Source back
-            'Prompt Name', 'Extracted Value', 'Ground Truth', 'Source',
-            'Is Success', 'Is Error', 'Is Not Found', 'Is Rate Limit',
-            'Latency (s)', 'Exact Match', 'Case-Insensitive Match'
-        ]
+        # --- CARD UI REPLACEMENT FOR GROUND TRUTH ---
+        # Initialize a dict to store ground truth values
+        if 'ground_truth_inputs' not in st.session_state:
+            st.session_state.ground_truth_inputs = {}
 
-        edited_df = st.data_editor(
-            results_df,
-            key="gt_editor",
-            use_container_width=True,
-            num_rows="dynamic",
-            disabled=disabled_cols,
-            column_order=column_order,
-            column_config={ # Add Source back
-                 "Prompt Name": st.column_config.TextColumn(width="medium"),
-                 "Extracted Value": st.column_config.TextColumn(width="medium"),
-                 "Ground Truth": st.column_config.TextColumn(width="medium", help="Enter the correct value here"),
-                 "Source": st.column_config.TextColumn(width="small"), # Show source
-                 "Is Success": st.column_config.CheckboxColumn("Success?", width="small"),
-                 "Is Error": st.column_config.CheckboxColumn("Error?", width="small"),
-                 "Is Not Found": st.column_config.CheckboxColumn("Not Found?", width="small"),
-                 "Is Rate Limit": st.column_config.CheckboxColumn("Rate Limit?", width="small"),
-                 "Latency (s)": st.column_config.NumberColumn(format="%.2f", width="small"),
-                 "Exact Match": st.column_config.CheckboxColumn("Exact?", width="small"),
-                 "Case-Insensitive Match": st.column_config.CheckboxColumn("Case-Ins?", width="small"),
-                 "Raw Output": None,
-                 "Parse Error": None
-            }
-        )
-        
-        debug_logger.user_action("Data editor displayed", data={
-            "df_shape": edited_df.shape,
-            "columns": list(edited_df.columns)
-        }, context={"step": "data_editor_displayed"})
+        for idx, result in enumerate(st.session_state.evaluation_results):
+            prompt_name = result.get('Prompt Name', f'Field {idx+1}')
+            extracted_value = result.get('Extracted Value', '')
+            source = result.get('Source', '')
+            is_success = result.get('Is Success', False)
+            is_error = result.get('Is Error', False)
+            is_not_found = result.get('Is Not Found', False)
+            latency = result.get('Latency (s)', 0.0)
 
-        # --- Mini Debug Widget ---
-        from debug_interface import create_mini_debug_widget
-        create_mini_debug_widget()
-        
-        # --- Manual Recheck Section ---
-        st.divider()
-        st.subheader("🔄 Manual Attribute Recheck")
-        
-        # Help section
-        with st.expander("ℹ️ How to use Manual Recheck"):
-            st.markdown("""
-            **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
-            
-            1. **Select attributes** from the dropdown below
-            2. **Click "Run Manual Recheck"** button
-            3. **Wait for results** - each attribute will be rechecked with enhanced prompts
-            4. **Review results** - successful extractions will show green checkmarks
-            
-            **When to use:**
-            - Attributes that returned "NOT FOUND"
-            - Attributes that returned "none" (might be incorrect)
-            - Attributes with errors or unexpected formats
-            - Any attribute you suspect might have been missed
-            
-            **What happens:**
-            - Uses more document chunks (15 instead of 8-12)
-            - Enhanced prompts specifically for rechecking
-            - Preserves original "none" values if recheck confirms they're correct
-            """)
-        
-        # Get attributes that might need manual recheck
-        # Now allow ALL attributes to be rechecked, not just failed ones
-        manual_recheck_candidates = []
-        for result in st.session_state.evaluation_results:
-            if isinstance(result, dict):
-                manual_recheck_candidates.append(result.get('Prompt Name', ''))
-        
-        if manual_recheck_candidates:
-            # Count "none" responses in manual recheck candidates (for info only)
-            none_candidates = []
-            other_candidates = []
-            for result in st.session_state.evaluation_results:
-                if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
-                    extracted_value = result.get('Extracted Value', '')
-                    if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
-                        none_candidates.append(result.get('Prompt Name'))
-                    else:
-                        other_candidates.append(result.get('Prompt Name'))
-            
-            st.info(f"You can recheck any of the {len(manual_recheck_candidates)} attributes below.")
-            if none_candidates:
-                st.warning(f"⚠️ {len(none_candidates)} of these returned 'none' responses and may contain missed values.")
-            
-            # Allow user to select specific attributes for recheck
-            selected_for_recheck = st.multiselect(
-                "Select attributes to recheck:",
-                options=manual_recheck_candidates,
-                default=manual_recheck_candidates[:3],  # Default to first 3
-                help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
+            # Use a unique key for each input
+            gt_key = f"gt_input_{idx}"
+
+            # Card style
+            st.markdown(f"""
+            <div style="background: #f8f9fa; border: 2px solid #1e3c72; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);">
+                <h4 style="color: #1e3c72; margin-bottom: 0.5rem;">{prompt_name}</h4>
+                <div><b>Extracted Value:</b> <span style="background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.2rem 0.5rem;">{extracted_value}</span></div>
+                <div><b>Source:</b> {source}</div>
+                <div>
+                    <b>Status:</b>
+                    {"✅" if is_success else ""}
+                    {"❌" if is_error else ""}
+                    {"⚠️" if is_not_found else ""}
+                    <span style="margin-left: 1em; color: #888;">Latency: {latency:.2f}s</span>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Ground truth input
+            gt_value = st.text_input(
+                f"Ground Truth for {prompt_name}",
+                value=st.session_state.ground_truth_inputs.get(gt_key, ""),
+                key=gt_key
             )
-            
-            # --- Ensure part_number is defined for manual recheck ---
-            part_number = st.session_state.get("part_number_input", "").strip()
-            
-            if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
-                st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
-                
-                # Run manual recheck
-                for prompt_name in selected_for_recheck:
-                    attribute_key = prompt_name
-                    pdf_instruction = prompts_to_run[attribute_key]["pdf"]
-                    
-                    with st.spinner(f"Manual recheck for {attribute_key}..."):
-                        try:
-                            start_time = time.time()
-                            
-                            # Use even more chunks for manual recheck
-                            context_chunks = fetch_chunks(
-                                st.session_state.retriever,
-                                part_number,
-                                attribute_key,
-                                k=15  # Increased for thorough manual recheck
-                            )
-                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
-                            
-                            # Enhanced prompt for manual recheck
-                            # Check if this attribute previously returned "none" or similar
-                            previous_value = None
-                            for result in st.session_state.evaluation_results:
-                                if result.get('Prompt Name') == prompt_name:
-                                    previous_value = result.get('Extracted Value', '')
-                                    break
-                            
-                            # Customize manual recheck prompt based on previous result
-                            if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
-                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK - CRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value. This is a manual recheck request - be exhaustive in your search."
-                            else:
-                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context."
-                            
-                            manual_recheck_input = {
-                                "context": context_text,
-                                "extraction_instructions": manual_instruction,
-                                "attribute_key": attribute_key,
-                                "part_number": part_number if part_number else "Not Provided"
-                            }
-                            
-                            json_result_str = loop.run_until_complete(
-                                _invoke_chain_and_process(st.session_state.pdf_chain, manual_recheck_input, f"{attribute_key} (Manual Recheck)")
-                            )
-                            run_time = time.time() - start_time
-                            
-                            # Parse result
-                            final_answer_value = "Error"
-                            parse_error = None
-                            raw_output = json_result_str if json_result_str else '{"error": "Manual recheck did not run"}'
-                            
-                            try:
-                                string_to_parse = raw_output.strip()
-                                parsed_json = extract_json_from_string(string_to_parse)
-                                
-                                if isinstance(parsed_json, dict) and attribute_key in parsed_json:
-                                    parsed_value = str(parsed_json[attribute_key])
-                                    if (parsed_value.strip() == "" or 
-                                        "not found" in parsed_value.lower() or
-                                        parsed_value.lower() in ["none", "null", "n/a", "na"]):
-                                        final_answer_value = "NOT FOUND (Manual)"
-                                    else:
-                                        final_answer_value = parsed_value
-                                        st.success(f"Manual recheck successful for '{attribute_key}': {parsed_value}")
-                                elif isinstance(parsed_json, dict) and "error" in parsed_json:
-                                    final_answer_value = f"Error: {parsed_json['error'][:100]}"
-                                    parse_error = ValueError(f"Manual Recheck Error: {parsed_json['error']}")
-                                else:
-                                    final_answer_value = "Unexpected JSON Format (Manual)"
-                                    parse_error = ValueError(f"Manual Recheck Unexpected JSON format")
-                                    
-                            except Exception as processing_exc:
-                                parse_error = processing_exc
-                                final_answer_value = "Processing Error (Manual)"
-                            
-                            # Update the result
-                            for i, result in enumerate(st.session_state.evaluation_results):
-                                if result.get('Prompt Name') == prompt_name:
-                                    previous_latency = result.get('Latency (s)', 0.0)
-                                    total_latency = previous_latency + round(run_time, 2)
-                                    
-                                    # Check if we should preserve the original value (rollback logic)
-                                    original_value = result.get('Extracted Value', '')
-                                    original_source = result.get('Source', 'Unknown')
-                                    
-                                    # Rollback conditions: preserve original value if manual recheck failed
-                                    should_rollback = (
-                                        # Preserve "none" values when confirmed by recheck
-                                        (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Manual)") or
-                                        # Rollback to original when manual recheck has errors
-                                        bool(parse_error) or
-                                        final_answer_value in ["Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
-                                    )
-                                    
-                                    # Determine final value
-                                    if should_rollback:
-                                        final_display_value = original_value  # Keep original value
-                                        final_source = original_source  # Keep original source
-                                        is_success = result.get('Is Success', False)  # Keep original success status
-                                        is_not_found = result.get('Is Not Found', False)  # Keep original not found status
-                                        is_error = result.get('Is Error', False)  # Keep original error status
-                                    else:
-                                        final_display_value = final_answer_value
-                                        final_source = 'Manual Recheck'
-                                        is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
-                                        is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
-                                        is_error = bool(parse_error)
-                                    
-                                    st.session_state.evaluation_results[i].update({
-                                        'Extracted Value': final_display_value,
-                                        'Source': final_source,
-                                        'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
-                                        'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
-                                        'Is Success': is_success,
-                                        'Is Error': is_error,
-                                        'Is Not Found': is_not_found,
-                                        'Is Rate Limit': False,
-                                        'Latency (s)': total_latency
-                                    })
-                                    
-                                    # Show feedback for rollback
-                                    if should_rollback and bool(parse_error):
-                                        st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
-                                    elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
-                                        st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
-                                    break
-                            
-                            time.sleep(0.5)  # Brief delay between manual rechecks
-                            
-                        except Exception as e:
-                            st.error(f"Error during manual recheck for '{attribute_key}': {e}")
-                            logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
-                
-                st.success("Manual recheck completed!")
-                st.rerun()  # Refresh to show updated results
-        else:
-            st.success("All attributes have been successfully extracted! No manual recheck needed.")
+            st.session_state.ground_truth_inputs[gt_key] = gt_value
 
-        # --- View Raw Mistral Extraction ---
-        if st.session_state.processed_documents:
-            st.divider()
-            st.header("4. View Raw Mistral Extraction")
-            
-            if st.button("👁️ View Raw Extracted Document Content", key="view_raw_extraction"):
-                st.session_state.show_raw_extraction = not st.session_state.get('show_raw_extraction', False)
-            
-            if st.session_state.get('show_raw_extraction', False):
-                st.info("This shows the raw document content extracted by Mistral Vision from your PDF pages.")
-                
-                # Group documents by source file
-                docs_by_source = {}
-                for doc in st.session_state.processed_documents:
-                    source = doc.metadata.get('source', 'Unknown')
-                    if source not in docs_by_source:
-                        docs_by_source[source] = []
-                    docs_by_source[source].append(doc)
-                
-                # Display documents grouped by source
-                for source, docs in docs_by_source.items():
-                    st.subheader(f"📄 {source}")
-                    
-                    # Sort documents by page number
-                    docs.sort(key=lambda x: x.metadata.get('page', 0))
-                    
-                    for doc in docs:
-                        page_num = doc.metadata.get('page', 'Unknown')
-                        st.markdown(f"**Page {page_num}:**")
-                        
-                        # Display the raw content with syntax highlighting
-                        st.code(doc.page_content, language='markdown')
-                        
-                        # Show metadata
-                        with st.expander(f"Page {page_num} Metadata"):
-                            st.json(doc.metadata)
-                        
-                        st.divider()
-                
-                # Add download button for raw extraction
-                if st.button("📥 Download Raw Extraction (Markdown)", key="download_raw_extraction"):
-                    # Create markdown content from all documents
-                    raw_content = f"# Raw Mistral Extraction Report\n\n"
-                    raw_content += f"**Extraction Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                    raw_content += f"**Total Documents:** {len(st.session_state.processed_documents)}\n\n"
-                    
-                    # Group documents by source file
-                    docs_by_source = {}
-                    for doc in st.session_state.processed_documents:
-                        source = doc.metadata.get('source', 'Unknown')
-                        if source not in docs_by_source:
-                            docs_by_source[source] = []
-                        docs_by_source[source].append(doc)
-                    
-                    for source, docs in docs_by_source.items():
-                        raw_content += f"## 📄 {source}\n\n"
-                        
-                        # Sort documents by page number
-                        docs.sort(key=lambda x: x.metadata.get('page', 0))
-                        
-                        for doc in docs:
-                            page_num = doc.metadata.get('page', 'Unknown')
-                            raw_content += f"### Page {page_num}\n\n"
-                            raw_content += f"**Metadata:**\n```json\n{json.dumps(doc.metadata, indent=2)}\n```\n\n"
-                            raw_content += f"**Content:**\n```markdown\n{doc.page_content}\n```\n\n"
-                            raw_content += "---\n\n"
-                    
-                    # Create download button
-                    st.download_button(
-                        label="📄 Download Raw Extraction Report",
-                        data=raw_content.encode('utf-8'),
-                        file_name='raw_mistral_extraction.md',
-                        mime='text/markdown',
-                        key='download_raw_md'
-                    )
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        # --- Export Section --- 
-        st.divider()
-        st.header("6. Export Results")
-
-        if st.session_state.evaluation_results:
-            # Prepare data for export
-            export_df = pd.DataFrame(st.session_state.evaluation_results)
-            export_summary = st.session_state.evaluation_metrics if st.session_state.evaluation_metrics else {}
-
-            # Convert DataFrame to CSV
-            @st.cache_data # Cache the conversion
-            def convert_df_to_csv(df):
-                return df.to_csv(index=False).encode('utf-8')
-
-            csv_data = convert_df_to_csv(export_df)
-
-            # Convert summary dict to JSON
-            json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
-
-            export_cols = st.columns(2)
-            with export_cols[0]:
-                st.download_button(
-                    label="📥 Download Detailed Results (CSV)",
-                    data=csv_data,
-                    file_name='detailed_extraction_results.csv',
-                    mime='text/csv',
-                    key='download_csv'
-                )
-            with export_cols[1]:
-                 st.download_button(
-                    label="📥 Download Summary Metrics (JSON)",
-                    data=json_summary_data,
-                    file_name='evaluation_summary.json',
-                    mime='application/json',
-                    key='download_json'
-                )
-        else:
-            st.info("Process documents and calculate metrics to enable export.")
+        # Button to save/evaluate
+        if st.button("Save Ground Truth"):
+            # Update the evaluation_results with the new ground truth values
+            for idx, result in enumerate(st.session_state.evaluation_results):
+                gt_key = f"gt_input_{idx}"
+                result['Ground Truth'] = st.session_state.ground_truth_inputs.get(gt_key, "")
+            st.success("Ground truth values saved!")
+        # --- END CARD UI REPLACEMENT ---
 
     # --- Block 3: Handle cases where extraction ran but yielded nothing, or hasn't run ---
     # This logic might need review depending on how Stage 1/2 errors are handled
