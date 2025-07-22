@@ -1713,17 +1713,15 @@ else:
             is_not_found = result.get('Is Not Found', False)
             latency = result.get('Latency (s)', 0.0)
 
+            # Use the same style as Extraction Results
             st.markdown(f"""
-            <div style=\"background: #f8f9fa; border: 2px solid #1e3c72; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);\">
-                <h4 style=\"color: #1e3c72; margin-bottom: 0.5rem;\">{prompt_name}</h4>
-                <div><b>Extracted Value:</b> <span style=\"background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.2rem 0.5rem;\">{extracted_value}</span></div>
-                <div><b>Source:</b> {source}</div>
-                <div>
-                    <b>Status:</b>
-                    {"✅" if is_success else ""}
-                    {"❌" if is_error else ""}
-                    {"⚠️" if is_not_found else ""}
-                    <span style=\"margin-left: 1em; color: #888;\">Latency: {latency:.2f}s</span>
+            <div class='result-item'>
+                <div class='result-label'>🔍 {prompt_name}</div>
+                <div class='result-value' title='{extracted_value}'>{extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}</div>
+                <div style='font-size:0.9em; color:#666; margin-top:0.5em;'>
+                    <b>Source:</b> {source} &nbsp;|
+                    <b>Status:</b> {('✅' if is_success else '')}{('❌' if is_error else '')}{('⚠️' if is_not_found else '')} &nbsp;|
+                    <span>Latency: {latency:.2f}s</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
