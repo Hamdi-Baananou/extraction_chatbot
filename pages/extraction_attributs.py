@@ -263,6 +263,7 @@ st.markdown(
         border-radius: 10px;
         margin: 0.5rem 0;
         transition: all 0.3s ease;
+        padding: 1rem 1.2rem;
     }
     
     .result-item:hover {
@@ -281,6 +282,7 @@ st.markdown(
         border: 1px solid #dee2e6;
         border-radius: 6px;
         font-weight: 500;
+        padding: 0.7rem 1rem;
     }
     </style>""",
     unsafe_allow_html=True
