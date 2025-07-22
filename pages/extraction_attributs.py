@@ -1,6 +1,3 @@
-import streamlit as st
-st.set_page_config(page_title="PDF Attribute Extraction", layout="wide")
-
 from loguru import logger
 import sys
 logger.remove()
@@ -17,6 +14,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from debug_logger import debug_logger, DebugTimer, log_streamlit_state, log_json_parsing
 debug_logger.info("Extraction page loaded", context={"page": "extraction_attributs"})
 
+import streamlit as st
 import os
 import time
 from loguru import logger
@@ -46,22 +44,22 @@ st.markdown(
     .header-band {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
         color: white;
-        padding: 0.1rem 0;
-        margin: 0 0 0.2rem 0;
+        padding: 0.7rem 0;
+        margin: -1rem -1rem 2rem -1rem;
         text-align: center;
-        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.15);
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
     }
     
     .header-band h1 {
-        font-size: 2em;
+        font-size: 2.2em;
         margin: 0;
         font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
     .header-band h2 {
-        font-size: 1.2em;
-        margin: 0.1rem 0 0 0;
+        font-size: 1.8em;
+        margin: 0.5rem 0 0 0;
         font-weight: 300;
         opacity: 0.9;
     }
@@ -71,17 +69,17 @@ st.markdown(
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
         border: none;
-        border-radius: 4px;
-        padding: 2px 8px;
+        border-radius: 10px;
+        padding: 12px 24px;
         font-weight: 600;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.08);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.2);
     }
     
     .stButton > button:hover {
         background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(30, 60, 114, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
     }
     
     /* Sidebar styling */
@@ -92,93 +90,83 @@ st.markdown(
     /* Section headers styling */
     .section-header {
         color: #1e3c72;
-        font-size: 1.2em;
-        margin-bottom: 0.2rem;
+        font-size: 2em;
+        margin-bottom: 1rem;
         font-weight: 600;
     }
     
     /* Info boxes styling */
     .stAlert {
-        border-left: 2px solid #1e3c72;
-        padding: 0.1rem 0.2rem;
+        border-left: 4px solid #1e3c72;
     }
     
     /* Success messages styling */
     .stSuccess {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
         border: 1px solid #1e3c72;
-        padding: 0.1rem 0.2rem;
     }
     
     /* Warning messages styling */
     .stWarning {
         background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
         border: 1px solid #1e3c72;
-        padding: 0.1rem 0.2rem;
     }
     
     /* Horizontal table styling */
     .horizontal-table {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.2rem;
-        margin: 0.2rem 0;
+        gap: 1rem;
+        margin: 1rem 0;
     }
     
     .attribute-card {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1.5px solid #1e3c72;
-        border-radius: 4px;
-        padding: 0.1rem 0.2rem 0.2rem 0.2rem;
-        min-width: 0;
-        width: 100%;
-        box-shadow: 0 1px 3px rgba(30, 60, 114, 0.04);
-        margin: 0 0 0.2rem 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+        border: 2px solid #1e3c72;
+        border-radius: 12px;
+        padding: 1rem;
+        min-width: 300px;
+        flex: 1;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        transition: all 0.3s ease;
     }
     
     .attribute-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(30, 60, 114, 0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 60, 114, 0.2);
     }
     
     .attribute-card h4 {
         color: #1e3c72;
-        margin: 0 0 0.1rem 0;
-        font-size: 1em;
-        font-weight: 700;
-        border-bottom: 1px solid #1e3c72;
-        padding-bottom: 0.1rem;
-        width: 100%;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.1em;
+        font-weight: 600;
+        border-bottom: 2px solid #1e3c72;
+        padding-bottom: 0.5rem;
     }
     
     .attribute-value {
-        background: #fff;
+        background: white;
         border: 1px solid #dee2e6;
-        border-radius: 3px;
-        padding: 0.1rem 0.2rem;
-        margin: 0.05rem 0 0 0;
+        border-radius: 6px;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
         font-weight: 500;
-        font-size: 0.95em;
-        width: 100%;
-        box-sizing: border-box;
     }
     
     .attribute-source {
-        font-size: 0.7em;
+        font-size: 0.8em;
         color: #6c757d;
         font-style: italic;
-        margin-top: 0.1rem;
+        margin-top: 0.5rem;
     }
     
     .success-indicator {
         display: inline-block;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        margin-right: 0.2rem;
+        margin-right: 0.5rem;
     }
     
     .success-true {
@@ -191,55 +179,54 @@ st.markdown(
     
     /* Data editor styling */
     .stDataFrame {
-        border-radius: 4px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.05);
-        padding: 0.1rem;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
     }
     
     /* Metrics styling */
     .metric-card {
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border: 1.5px solid #1e3c72;
-        border-radius: 4px;
-        padding: 0.2rem;
+        border: 2px solid #1e3c72;
+        border-radius: 10px;
+        padding: 1rem;
         text-align: center;
-        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.05);
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
     }
     
     .metric-value {
-        font-size: 1.2em;
+        font-size: 2em;
         font-weight: bold;
         color: #1e3c72;
-        margin: 0.1rem 0;
+        margin: 0.5rem 0;
     }
     
     .metric-label {
         color: #6c757d;
-        font-size: 0.8em;
-        margin-bottom: 0.1rem;
+        font-size: 0.9em;
+        margin-bottom: 0.5rem;
     }
     
     /* Right pane styling */
     .right-pane {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-left: 2px solid #1e3c72;
-        border-radius: 0 8px 8px 0;
-        padding: 0.2rem;
-        box-shadow: -2px 0 6px rgba(30, 60, 114, 0.04);
+        border-left: 3px solid #1e3c72;
+        border-radius: 0 15px 15px 0;
+        padding: 1.5rem;
+        box-shadow: -5px 0 15px rgba(30, 60, 114, 0.1);
         max-height: 90vh;
         overflow-y: auto;
     }
     
     /* Chat container styling */
     .chat-container {
-        max-height: 300px;
+        max-height: 400px;
         overflow-y: auto;
-        padding: 0.2rem;
+        padding: 1rem;
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(30, 60, 114, 0.04);
-        margin-bottom: 0.2rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
+        margin-bottom: 1rem;
     }
     
     /* Chatbot styling */
@@ -580,7 +567,8 @@ if embedding_function is None or llm is None:
 # Blue band header with LEONI
 st.markdown("""
     <div class="header-band">
-        <h1>LEONI</h1>
+        <h1>LEOPARTS</h1>
+        <h2>LEONI</h2>
     </div>
 """, unsafe_allow_html=True)
 
@@ -700,11 +688,10 @@ with st.sidebar:
 
 
 # Create two columns: left for extraction, right for results and chat
-# left_col, right_col = st.columns([2, 1])
-# with left_col:
-#     st.header("2. Extracted Information")
+left_col, right_col = st.columns([2, 1])
 
-st.header("2. Extracted Information")
+with left_col:
+    st.header("2. Extracted Information")
 
 # --- Get current asyncio event loop --- 
 # Needed for both scraping and running the async extraction chain
@@ -1078,6 +1065,7 @@ else:
                 intermediate_results[prompt_name] = {
                     'Prompt Name': prompt_name,
                     'Extracted Value': final_answer_value, # Store Stage 1 value/error/NOT FOUND
+                    'Ground Truth': '',
                     'Source': source,
                     'Raw Output': raw_output,
                     'Parse Error': str(parse_error) if parse_error else None,
@@ -1116,6 +1104,7 @@ else:
                  intermediate_results[prompt_name] = {
                     'Prompt Name': prompt_name,
                     'Extracted Value': "(Web Stage Skipped)", 
+                    'Ground Truth': '',
                     'Source': 'Pending',
                     'Raw Output': 'N/A',
                     'Parse Error': None,
@@ -1604,7 +1593,63 @@ else:
             }, context={"step": "stage3_skipped_all_successful"})
         
         # --- Stage Summary ---
-        # (REMOVED Extraction Stage Summary UI section)
+        st.divider()
+        st.subheader("📊 Extraction Stage Summary")
+        
+        # Count results by source
+        stage_summary = {}
+        for result in extraction_results_list:
+            if isinstance(result, dict):
+                source = result.get('Source', 'Unknown')
+                is_success = result.get('Is Success', False)
+                is_error = result.get('Is Error', False)
+                is_not_found = result.get('Is Not Found', False)
+                
+                if source not in stage_summary:
+                    stage_summary[source] = {'total': 0, 'success': 0, 'error': 0, 'not_found': 0}
+                
+                stage_summary[source]['total'] += 1
+                if is_success:
+                    stage_summary[source]['success'] += 1
+                elif is_error:
+                    stage_summary[source]['error'] += 1
+                elif is_not_found:
+                    stage_summary[source]['not_found'] += 1
+        
+        # Display stage summary
+        summary_cols = st.columns(len(stage_summary))
+        for i, (source, stats) in enumerate(stage_summary.items()):
+            with summary_cols[i]:
+                success_rate = (stats['success'] / stats['total'] * 100) if stats['total'] > 0 else 0
+                color = "#28a745" if success_rate > 70 else "#ffc107" if success_rate > 30 else "#dc3545"
+                
+                st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, {color} 0%, {color}80 100%); 
+                                color: white; 
+                                padding: 1rem; 
+                                border-radius: 10px; 
+                                text-align: center; 
+                                margin-bottom: 1rem;">
+                        <h4 style="margin: 0;">{source}</h4>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">
+                            Success: {stats['success']}/{stats['total']} ({success_rate:.1f}%)<br>
+                            Errors: {stats['error']} | Not Found: {stats['not_found']}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+        
+        debug_logger.info("Extraction process completed", data={
+            "total_results": len(extraction_results_list),
+            "stage_summary": stage_summary,
+            "results_summary": {
+                "success_count": sum(1 for r in extraction_results_list if r.get('Is Success', False)),
+                "error_count": sum(1 for r in extraction_results_list if r.get('Is Error', False)),
+                "not_found_count": sum(1 for r in extraction_results_list if r.get('Is Not Found', False)),
+                "rate_limit_count": sum(1 for r in extraction_results_list if r.get('Is Rate Limit', False))
+            }
+        }, context={"step": "extraction_complete"})
+        
+        # Set extraction_performed flag and handle success/error messages
         extraction_successful = True # Assume success unless critical errors occurred (e.g., chain init)
 
         if extraction_successful:
@@ -1612,189 +1657,469 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter on success
             logger.info("Extraction completed successfully, setting extraction_performed=True")
-            st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback).")
+            st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback). Enter ground truth below.")
+            
             debug_logger.session_state("evaluation_results", extraction_results_list, context={"step": "results_stored"})
             debug_logger.session_state("extraction_performed", True, context={"step": "extraction_flag_set"})
             debug_logger.session_state("extraction_attempts", 0, context={"step": "attempts_reset"})
             debug_logger.info("Extraction completed successfully", context={"step": "extraction_success"})
+            # st.rerun() # REMOVE/COMMENT OUT to keep cards visible
         else:
             st.error("Extraction process encountered critical issues.")
+            # Optionally store partial results if desired
             st.session_state.evaluation_results = extraction_results_list
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter even on error
             logger.info("Extraction completed with issues, setting extraction_performed=True")
+            
             debug_logger.warning("Extraction completed with issues", data={
                 "results_count": len(extraction_results_list)
             }, context={"step": "extraction_with_issues"})
+            # st.rerun() # REMOVE/COMMENT OUT to keep cards visible (even on error)
 
-        # --- Card-based UI for Extracted Attributes ---
-        # (REMOVED 3. Enter Ground Truth & Evaluate and 4. View Raw Mistral Extraction UI sections)
-        import re
-        def strip_html_tags(text):
-            if not isinstance(text, str):
-                return text
-            clean = re.compile('<.*?>')
-            return re.sub(clean, '', text)
 
-        # --- Update CSS for compact cards ---
-        st.markdown(
-            """
-            <style>
-            .attribute-card {
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border: 1.5px solid #1e3c72;
-                border-radius: 6px;
-                padding: 0.4rem 0.6rem 0.6rem 0.6rem;
-                min-width: 0;
-                width: 100%;
-                box-shadow: 0 2px 6px rgba(30, 60, 114, 0.07);
-                margin: 0 0 0.5rem 0;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .attribute-card h4 {
-                color: #1e3c72;
-                margin: 0 0 0.3rem 0;
-                font-size: 1em;
-                font-weight: 700;
-                border-bottom: 1px solid #1e3c72;
-                padding-bottom: 0.2rem;
-                width: 100%;
-            }
-            .attribute-value {
-                background: #fff;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 0.25rem 0.5rem;
-                margin: 0.1rem 0 0 0;
-                font-weight: 500;
-                font-size: 0.95em;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            /* Remove extra margin between columns */
-            .element-container .stColumn > div {
-                /* Removed forced margin, revert to Streamlit default */
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
+    # --- Block 2: Display Ground Truth / Metrics (if results exist) ---
+    # This part needs the 'Source' column re-added for display
+    if st.session_state.evaluation_results:
+        debug_logger.info("Displaying evaluation results", data={
+            "results_count": len(st.session_state.evaluation_results)
+        }, context={"step": "display_results"})
+        
+        st.divider()
+        st.header("3. Enter Ground Truth & Evaluate")
+
+        results_df = pd.DataFrame(st.session_state.evaluation_results)
+        
+        debug_logger.data_transformation(
+            "Results DataFrame creation",
+            st.session_state.evaluation_results,
+            results_df.to_dict('records'),
+            context={"step": "results_dataframe_created"}
         )
-        st.divider()
-        st.subheader("🗂️ Extracted Attributes (Compact Grid)")
-        # Display cards in a responsive grid: up to 4 per row, only name and value
-        results = [r for r in st.session_state.evaluation_results if isinstance(r, dict)]
-        num_cols = 5
-        for i in range(0, len(results), num_cols):
-            row_results = results[i:i+num_cols]
-            cols = st.columns(min(len(row_results), num_cols))
-            for j, result in enumerate(row_results):
-                with cols[j]:
-                    attr_name = result.get('Prompt Name', 'Unknown Attribute')
-                    value = result.get('Extracted Value', '')
-                    st.markdown(f'''<div class=\"attribute-card\">
-                        <h4>{attr_name}</h4>
-                        <div class=\"attribute-value\">{value}</div>
-                    </div>''', unsafe_allow_html=True)
+        
+        if 'Source' not in results_df.columns:
+             results_df['Source'] = 'Unknown' # Add placeholder if missing
+             debug_logger.warning("Source column missing, added placeholder", context={"step": "source_column_fixed"})
 
-        st.divider()
+        st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
 
-        # --- Main Extraction UI ---
-        if st.session_state.get("evaluation_results"):
-            # --- Manual Recheck Section ---
-            st.divider()
-            st.subheader("🔄 Manual Attribute Recheck")
+        disabled_cols = [col for col in results_df.columns if col != 'Ground Truth']
+        column_order = [ # Add Source back
+            'Prompt Name', 'Extracted Value', 'Ground Truth', 'Source',
+            'Is Success', 'Is Error', 'Is Not Found', 'Is Rate Limit',
+            'Latency (s)', 'Exact Match', 'Case-Insensitive Match'
+        ]
+
+        edited_df = st.data_editor(
+            results_df,
+            key="gt_editor",
+            use_container_width=True,
+            num_rows="dynamic",
+            disabled=disabled_cols,
+            column_order=column_order,
+            column_config={ # Add Source back
+                 "Prompt Name": st.column_config.TextColumn(width="medium"),
+                 "Extracted Value": st.column_config.TextColumn(width="medium"),
+                 "Ground Truth": st.column_config.TextColumn(width="medium", help="Enter the correct value here"),
+                 "Source": st.column_config.TextColumn(width="small"), # Show source
+                 "Is Success": st.column_config.CheckboxColumn("Success?", width="small"),
+                 "Is Error": st.column_config.CheckboxColumn("Error?", width="small"),
+                 "Is Not Found": st.column_config.CheckboxColumn("Not Found?", width="small"),
+                 "Is Rate Limit": st.column_config.CheckboxColumn("Rate Limit?", width="small"),
+                 "Latency (s)": st.column_config.NumberColumn(format="%.2f", width="small"),
+                 "Exact Match": st.column_config.CheckboxColumn("Exact?", width="small"),
+                 "Case-Insensitive Match": st.column_config.CheckboxColumn("Case-Ins?", width="small"),
+                 "Raw Output": None,
+                 "Parse Error": None
+            }
+        )
+        
+        debug_logger.user_action("Data editor displayed", data={
+            "df_shape": edited_df.shape,
+            "columns": list(edited_df.columns)
+        }, context={"step": "data_editor_displayed"})
+
+        # --- Mini Debug Widget ---
+        from debug_interface import create_mini_debug_widget
+        create_mini_debug_widget()
+        
+        # --- Manual Recheck Section ---
+        st.divider()
+        st.subheader("🔄 Manual Attribute Recheck")
+        
+        # Help section
+        with st.expander("ℹ️ How to use Manual Recheck"):
+            st.markdown("""
+            **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
             
-            with st.expander("ℹ️ How to use Manual Recheck"):
-                st.markdown("""
-                **Manual Recheck allows you to re-extract specific attributes that may have been missed:**
-                1. **Select attributes** from the dropdown below
-                2. **Click "Run Manual Recheck"** button
-                3. **Wait for results** - each attribute will be rechecked with enhanced prompts
-                4. **Review results** - successful extractions will show green checkmarks
-                **When to use:**
-                - Attributes that returned "NOT FOUND"
-                - Attributes that returned "none" (might be incorrect)
-                - Attributes with errors or unexpected formats
-                - Any attribute you suspect might have been missed
-                **What happens:**
-                - Uses more document chunks (15 instead of 8-12)
-                - Enhanced prompts specifically for rechecking
-                - Preserves original "none" values if recheck confirms they're correct
-                """)
-            manual_recheck_candidates = []
+            1. **Select attributes** from the dropdown below
+            2. **Click "Run Manual Recheck"** button
+            3. **Wait for results** - each attribute will be rechecked with enhanced prompts
+            4. **Review results** - successful extractions will show green checkmarks
+            
+            **When to use:**
+            - Attributes that returned "NOT FOUND"
+            - Attributes that returned "none" (might be incorrect)
+            - Attributes with errors or unexpected formats
+            - Any attribute you suspect might have been missed
+            
+            **What happens:**
+            - Uses more document chunks (15 instead of 8-12)
+            - Enhanced prompts specifically for rechecking
+            - Preserves original "none" values if recheck confirms they're correct
+            """)
+        
+        # Get attributes that might need manual recheck
+        # Now allow ALL attributes to be rechecked, not just failed ones
+        manual_recheck_candidates = []
+        for result in st.session_state.evaluation_results:
+            if isinstance(result, dict):
+                manual_recheck_candidates.append(result.get('Prompt Name', ''))
+        
+        if manual_recheck_candidates:
+            # Count "none" responses in manual recheck candidates (for info only)
+            none_candidates = []
+            other_candidates = []
             for result in st.session_state.evaluation_results:
-                if isinstance(result, dict):
-                    manual_recheck_candidates.append(result.get('Prompt Name', ''))
-            if manual_recheck_candidates:
-                none_candidates = []
-                other_candidates = []
-                for result in st.session_state.evaluation_results:
-                    if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
-                        extracted_value = result.get('Extracted Value', '')
-                        if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
-                            none_candidates.append(result.get('Prompt Name'))
-                        else:
-                            other_candidates.append(result.get('Prompt Name'))
-                selected_for_recheck = st.multiselect(
-                    "Select attributes to recheck:",
-                    options=manual_recheck_candidates,
-                    default=manual_recheck_candidates[:3],
-                    help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones.",
-                    key="manual_recheck_multiselect"
-                )
-                part_number = st.session_state.get("part_number_input", "").strip()
-                # Use a unique key for the button
-                manual_recheck_clicked = st.button("🔄 Run Manual Recheck", type="primary", key="manual_recheck_button")
-                if selected_for_recheck and manual_recheck_clicked:
-                    st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
-                    # TODO: Implement the actual manual recheck logic here.
-                    # For now, just display a placeholder message and do not modify st.session_state.evaluation_results.
-                    st.warning("Manual recheck logic not yet implemented. Results will update here when available.")
-                elif not selected_for_recheck:
-                    st.info("Select at least one attribute to enable manual recheck.")
-                # Always display the last results from session state below
-            else:
-                st.success("All attributes have been successfully extracted! No manual recheck needed.")
-            # --- Export Section ---
-            st.divider()
-            st.header("6. Export Results")
-            if st.session_state.evaluation_results:
-                export_df = pd.DataFrame(st.session_state.evaluation_results)
-                export_summary = st.session_state.evaluation_metrics if st.session_state.evaluation_metrics else {}
-                @st.cache_data
-                def convert_df_to_csv(df):
-                    return df.to_csv(index=False).encode('utf-8')
-                csv_data = convert_df_to_csv(export_df)
-                json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
-                export_cols = st.columns(2)
-                with export_cols[0]:
-                    st.download_button(
-                        label="📥 Download Detailed Results (CSV)",
-                        data=csv_data,
-                        file_name='detailed_extraction_results.csv',
-                        mime='text/csv',
-                        key='download_csv'
-                    )
-                with export_cols[1]:
-                    st.download_button(
-                        label="📥 Download Summary Metrics (JSON)",
-                        data=json_summary_data,
-                        file_name='evaluation_summary.json',
-                        mime='application/json',
-                        key='download_json'
-                    )
-            else:
-                st.info("Process documents and calculate metrics to enable export.")
+                if isinstance(result, dict) and result.get('Prompt Name') in manual_recheck_candidates:
+                    extracted_value = result.get('Extracted Value', '')
+                    if extracted_value and extracted_value.lower() in ["none", "null", "n/a", "na"]:
+                        none_candidates.append(result.get('Prompt Name'))
+                    else:
+                        other_candidates.append(result.get('Prompt Name'))
+            
+            st.info(f"You can recheck any of the {len(manual_recheck_candidates)} attributes below.")
+            if none_candidates:
+                st.warning(f"⚠️ {len(none_candidates)} of these returned 'none' responses and may contain missed values.")
+            
+            # Allow user to select specific attributes for recheck
+            selected_for_recheck = st.multiselect(
+                "Select attributes to recheck:",
+                options=manual_recheck_candidates,
+                default=manual_recheck_candidates[:3],  # Default to first 3
+                help="Select any attribute to re-extract from the PDF using the RAG LLM. Useful for double-checking or improving any extraction, not just failed ones."
+            )
+            
+            # --- Ensure part_number is defined for manual recheck ---
+            part_number = st.session_state.get("part_number_input", "").strip()
+            
+            if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
+                st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
+                
+                # Run manual recheck
+                for prompt_name in selected_for_recheck:
+                    attribute_key = prompt_name
+                    pdf_instruction = prompts_to_run[attribute_key]["pdf"]
+                    
+                    with st.spinner(f"Manual recheck for {attribute_key}..."):
+                        try:
+                            start_time = time.time()
+                            
+                            # Use even more chunks for manual recheck
+                            context_chunks = fetch_chunks(
+                                st.session_state.retriever,
+                                part_number,
+                                attribute_key,
+                                k=15  # Increased for thorough manual recheck
+                            )
+                            context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
+                            
+                            # Enhanced prompt for manual recheck
+                            # Check if this attribute previously returned "none" or similar
+                            previous_value = None
+                            for result in st.session_state.evaluation_results:
+                                if result.get('Prompt Name') == prompt_name:
+                                    previous_value = result.get('Extracted Value', '')
+                                    break
+                            
+                            # Customize manual recheck prompt based on previous result
+                            if previous_value and previous_value.lower() in ["none", "null", "n/a", "na"]:
+                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK - CRITICAL: Previous extraction returned '{previous_value}'. This may be incorrect. Please be extremely thorough and look for ANY mention of this attribute, even if it's not explicitly labeled. Consider technical specifications, material properties, dimensions, or any related information that might indicate this attribute's value. This is a manual recheck request - be exhaustive in your search."
+                            else:
+                                manual_instruction = f"{pdf_instruction}\n\nMANUAL RECHECK: This is a manual recheck request. Please be extremely thorough and consider all possible interpretations. Look for any mention, even indirect, of this attribute in the document context."
+                            
+                            manual_recheck_input = {
+                                "context": context_text,
+                                "extraction_instructions": manual_instruction,
+                                "attribute_key": attribute_key,
+                                "part_number": part_number if part_number else "Not Provided"
+                            }
+                            
+                            json_result_str = loop.run_until_complete(
+                                _invoke_chain_and_process(st.session_state.pdf_chain, manual_recheck_input, f"{attribute_key} (Manual Recheck)")
+                            )
+                            run_time = time.time() - start_time
+                            
+                            # Parse result
+                            final_answer_value = "Error"
+                            parse_error = None
+                            raw_output = json_result_str if json_result_str else '{"error": "Manual recheck did not run"}'
+                            
+                            try:
+                                string_to_parse = raw_output.strip()
+                                parsed_json = extract_json_from_string(string_to_parse)
+                                
+                                if isinstance(parsed_json, dict) and attribute_key in parsed_json:
+                                    parsed_value = str(parsed_json[attribute_key])
+                                    if (parsed_value.strip() == "" or 
+                                        "not found" in parsed_value.lower() or
+                                        parsed_value.lower() in ["none", "null", "n/a", "na"]):
+                                        final_answer_value = "NOT FOUND (Manual)"
+                                    else:
+                                        final_answer_value = parsed_value
+                                        st.success(f"Manual recheck successful for '{attribute_key}': {parsed_value}")
+                                elif isinstance(parsed_json, dict) and "error" in parsed_json:
+                                    final_answer_value = f"Error: {parsed_json['error'][:100]}"
+                                    parse_error = ValueError(f"Manual Recheck Error: {parsed_json['error']}")
+                                else:
+                                    final_answer_value = "Unexpected JSON Format (Manual)"
+                                    parse_error = ValueError(f"Manual Recheck Unexpected JSON format")
+                                    
+                            except Exception as processing_exc:
+                                parse_error = processing_exc
+                                final_answer_value = "Processing Error (Manual)"
+                            
+                            # Update the result
+                            for i, result in enumerate(st.session_state.evaluation_results):
+                                if result.get('Prompt Name') == prompt_name:
+                                    previous_latency = result.get('Latency (s)', 0.0)
+                                    total_latency = previous_latency + round(run_time, 2)
+                                    
+                                    # Check if we should preserve the original value (rollback logic)
+                                    original_value = result.get('Extracted Value', '')
+                                    original_source = result.get('Source', 'Unknown')
+                                    
+                                    # Rollback conditions: preserve original value if manual recheck failed
+                                    should_rollback = (
+                                        # Preserve "none" values when confirmed by recheck
+                                        (original_value.lower() in ["none", "null", "n/a", "na"] and final_answer_value == "NOT FOUND (Manual)") or
+                                        # Rollback to original when manual recheck has errors
+                                        bool(parse_error) or
+                                        final_answer_value in ["Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                    )
+                                    
+                                    # Determine final value
+                                    if should_rollback:
+                                        final_display_value = original_value  # Keep original value
+                                        final_source = original_source  # Keep original source
+                                        is_success = result.get('Is Success', False)  # Keep original success status
+                                        is_not_found = result.get('Is Not Found', False)  # Keep original not found status
+                                        is_error = result.get('Is Error', False)  # Keep original error status
+                                    else:
+                                        final_display_value = final_answer_value
+                                        final_source = 'Manual Recheck'
+                                        is_success = not bool(parse_error) and final_answer_value not in ["NOT FOUND (Manual)", "Error", "Processing Error (Manual)", "Unexpected JSON Format (Manual)"]
+                                        is_not_found = final_answer_value in ["NOT FOUND (Manual)"]
+                                        is_error = bool(parse_error)
+                                    
+                                    st.session_state.evaluation_results[i].update({
+                                        'Extracted Value': final_display_value,
+                                        'Source': final_source,
+                                        'Raw Output': raw_output if not should_rollback else result.get('Raw Output', raw_output),
+                                        'Parse Error': str(parse_error) if parse_error and not should_rollback else result.get('Parse Error'),
+                                        'Is Success': is_success,
+                                        'Is Error': is_error,
+                                        'Is Not Found': is_not_found,
+                                        'Is Rate Limit': False,
+                                        'Latency (s)': total_latency
+                                    })
+                                    
+                                    # Show feedback for rollback
+                                    if should_rollback and bool(parse_error):
+                                        st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
+                                    elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
+                                        st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
+                                    break
+                            
+                            time.sleep(0.5)  # Brief delay between manual rechecks
+                            
+                        except Exception as e:
+                            st.error(f"Error during manual recheck for '{attribute_key}': {e}")
+                            logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
+                
+                st.success("Manual recheck completed!")
+                st.rerun()  # Refresh to show updated results
         else:
-            st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
+            st.success("All attributes have been successfully extracted! No manual recheck needed.")
+
+        # --- View Raw Mistral Extraction ---
+        if st.session_state.processed_documents:
+            st.divider()
+            st.header("4. View Raw Mistral Extraction")
+            
+            if st.button("👁️ View Raw Extracted Document Content", key="view_raw_extraction"):
+                st.session_state.show_raw_extraction = not st.session_state.get('show_raw_extraction', False)
+            
+            if st.session_state.get('show_raw_extraction', False):
+                st.info("This shows the raw document content extracted by Mistral Vision from your PDF pages.")
+                
+                # Group documents by source file
+                docs_by_source = {}
+                for doc in st.session_state.processed_documents:
+                    source = doc.metadata.get('source', 'Unknown')
+                    if source not in docs_by_source:
+                        docs_by_source[source] = []
+                    docs_by_source[source].append(doc)
+                
+                # Display documents grouped by source
+                for source, docs in docs_by_source.items():
+                    st.subheader(f"📄 {source}")
+                    
+                    # Sort documents by page number
+                    docs.sort(key=lambda x: x.metadata.get('page', 0))
+                    
+                    for doc in docs:
+                        page_num = doc.metadata.get('page', 'Unknown')
+                        st.markdown(f"**Page {page_num}:**")
+                        
+                        # Display the raw content with syntax highlighting
+                        st.code(doc.page_content, language='markdown')
+                        
+                        # Show metadata
+                        with st.expander(f"Page {page_num} Metadata"):
+                            st.json(doc.metadata)
+                        
+                        st.divider()
+                
+                # Add download button for raw extraction
+                if st.button("📥 Download Raw Extraction (Markdown)", key="download_raw_extraction"):
+                    # Create markdown content from all documents
+                    raw_content = f"# Raw Mistral Extraction Report\n\n"
+                    raw_content += f"**Extraction Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                    raw_content += f"**Total Documents:** {len(st.session_state.processed_documents)}\n\n"
+                    
+                    # Group documents by source file
+                    docs_by_source = {}
+                    for doc in st.session_state.processed_documents:
+                        source = doc.metadata.get('source', 'Unknown')
+                        if source not in docs_by_source:
+                            docs_by_source[source] = []
+                        docs_by_source[source].append(doc)
+                    
+                    for source, docs in docs_by_source.items():
+                        raw_content += f"## 📄 {source}\n\n"
+                        
+                        # Sort documents by page number
+                        docs.sort(key=lambda x: x.metadata.get('page', 0))
+                        
+                        for doc in docs:
+                            page_num = doc.metadata.get('page', 'Unknown')
+                            raw_content += f"### Page {page_num}\n\n"
+                            raw_content += f"**Metadata:**\n```json\n{json.dumps(doc.metadata, indent=2)}\n```\n\n"
+                            raw_content += f"**Content:**\n```markdown\n{doc.page_content}\n```\n\n"
+                            raw_content += "---\n\n"
+                    
+                    # Create download button
+                    st.download_button(
+                        label="📄 Download Raw Extraction Report",
+                        data=raw_content.encode('utf-8'),
+                        file_name='raw_mistral_extraction.md',
+                        mime='text/markdown',
+                        key='download_raw_md'
+                    )
+
+        # --- Export Section --- 
+        st.divider()
+        st.header("6. Export Results")
+
+        if st.session_state.evaluation_results:
+            # Prepare data for export
+            export_df = pd.DataFrame(st.session_state.evaluation_results)
+            export_summary = st.session_state.evaluation_metrics if st.session_state.evaluation_metrics else {}
+
+            # Convert DataFrame to CSV
+            @st.cache_data # Cache the conversion
+            def convert_df_to_csv(df):
+                return df.to_csv(index=False).encode('utf-8')
+
+            csv_data = convert_df_to_csv(export_df)
+
+            # Convert summary dict to JSON
+            json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
+
+            export_cols = st.columns(2)
+            with export_cols[0]:
+                st.download_button(
+                    label="📥 Download Detailed Results (CSV)",
+                    data=csv_data,
+                    file_name='detailed_extraction_results.csv',
+                    mime='text/csv',
+                    key='download_csv'
+                )
+            with export_cols[1]:
+                 st.download_button(
+                    label="📥 Download Summary Metrics (JSON)",
+                    data=json_summary_data,
+                    file_name='evaluation_summary.json',
+                    mime='application/json',
+                    key='download_json'
+                )
+        else:
+            st.info("Process documents and calculate metrics to enable export.")
 
     # --- Block 3: Handle cases where extraction ran but yielded nothing, or hasn't run ---
     # This logic might need review depending on how Stage 1/2 errors are handled
     elif (st.session_state.pdf_chain or st.session_state.web_chain) and st.session_state.extraction_performed:
         st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
-
-
+with right_col:
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                    color: white; 
+                    padding: 1rem; 
+                    border-radius: 15px; 
+                    text-align: center; 
+                    margin-bottom: 1rem;">
+            <h3 style="margin: 0; font-size: 1.5em;">📊 Extraction Results</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
-
+    # Display extraction results in a beautiful format
+    if st.session_state.evaluation_results:
+        st.markdown("""
+            <div class="extraction-results">
+        """, unsafe_allow_html=True)
+        
+        # Create a summary of extracted data
+        extracted_data = {}
+        for result in st.session_state.evaluation_results:
+            if isinstance(result, dict):
+                prompt_name = result.get('Prompt Name', 'Unknown')
+                extracted_value = result.get('Extracted Value', '')
+                if extracted_value and extracted_value != 'NOT FOUND' and extracted_value != 'ERROR':
+                    extracted_data[prompt_name] = extracted_value
+        
+        # Display each extracted item beautifully
+        for key, value in extracted_data.items():
+            # Truncate long values for better display
+            display_value = value[:100] + "..." if len(value) > 100 else value
+            st.markdown(f"""
+                <div class="result-item">
+                    <div class="result-label">🔍 {key}</div>
+                    <div class="result-value" title="{value}">{display_value}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Success metrics
+        if st.session_state.evaluation_metrics:
+            metrics = st.session_state.evaluation_metrics
+            st.markdown("""
+                <div style="background: white; border-radius: 15px; padding: 1rem; margin: 1rem 0; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);">
+                    <h4 style="color: #1e3c72; margin-bottom: 1rem;">📈 Success Metrics</h4>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                success_rate = metrics.get('success_rate', 0)
+                st.metric("Success Rate", f"{success_rate:.1%}")
+            with col2:
+                total_fields = metrics.get('total_fields', 0)
+                st.metric("Total Fields", total_fields)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("📄 Upload and process documents to see extracted results here.")
+    
+    
+    
