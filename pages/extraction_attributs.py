@@ -1,3 +1,5 @@
+import streamlit as st
+st.set_page_config(layout="wide")
 from loguru import logger
 import sys
 logger.remove()
@@ -44,8 +46,6 @@ st.markdown(
     .header-band {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
         color: white;
-        padding: 0.7rem 0;
-        margin: -1rem -1rem 2rem -1rem;
         text-align: center;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
     }
@@ -117,14 +117,12 @@ st.markdown(
         display: flex;
         flex-wrap: wrap;
         gap: 1rem;
-        margin: 1rem 0;
     }
     
     .attribute-card {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border: 2px solid #1e3c72;
         border-radius: 12px;
-        padding: 1rem;
         min-width: 300px;
         flex: 1;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
@@ -149,7 +147,6 @@ st.markdown(
         background: white;
         border: 1px solid #dee2e6;
         border-radius: 6px;
-        padding: 0.5rem;
         margin: 0.5rem 0;
         font-weight: 500;
     }
@@ -189,7 +186,6 @@ st.markdown(
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         border: 2px solid #1e3c72;
         border-radius: 10px;
-        padding: 1rem;
         text-align: center;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
     }
@@ -212,7 +208,6 @@ st.markdown(
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-left: 3px solid #1e3c72;
         border-radius: 0 15px 15px 0;
-        padding: 1.5rem;
         box-shadow: -5px 0 15px rgba(30, 60, 114, 0.1);
         max-height: 90vh;
         overflow-y: auto;
@@ -222,7 +217,6 @@ st.markdown(
     .chat-container {
         max-height: 400px;
         overflow-y: auto;
-        padding: 1rem;
         background: white;
         border-radius: 15px;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
@@ -233,7 +227,6 @@ st.markdown(
     .chat-container {
         background: white;
         border-radius: 15px;
-        padding: 1rem;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
         margin-bottom: 1rem;
     }
@@ -241,7 +234,6 @@ st.markdown(
     .chat-message {
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
         border-radius: 15px;
-        padding: 1rem;
         margin: 0.5rem 0;
         border-left: 4px solid #1e3c72;
     }
@@ -261,7 +253,6 @@ st.markdown(
     .extraction-results {
         background: white;
         border-radius: 15px;
-        padding: 1rem;
         box-shadow: 0 4px 15px rgba(30, 60, 114, 0.1);
         margin-bottom: 1rem;
     }
@@ -270,7 +261,6 @@ st.markdown(
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border: 1px solid #dee2e6;
         border-radius: 10px;
-        padding: 1rem;
         margin: 0.5rem 0;
         transition: all 0.3s ease;
     }
@@ -290,7 +280,6 @@ st.markdown(
         background: white;
         border: 1px solid #dee2e6;
         border-radius: 6px;
-        padding: 0.5rem;
         font-weight: 500;
     }
     </style>""",
