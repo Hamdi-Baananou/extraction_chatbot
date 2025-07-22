@@ -1704,27 +1704,30 @@ else:
         st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
 
         # --- CARD UI REPLACEMENT FOR GROUND TRUTH ---
-        for idx, result in enumerate(st.session_state.evaluation_results):
-            prompt_name = result.get('Prompt Name', f'Field {idx+1}')
-            extracted_value = result.get('Extracted Value', '')
-            source = result.get('Source', '')
-            is_success = result.get('Is Success', False)
-            is_error = result.get('Is Error', False)
-            is_not_found = result.get('Is Not Found', False)
-            latency = result.get('Latency (s)', 0.0)
+        num_cols = 5
+        cards = st.session_state.evaluation_results
+        cols = st.columns(num_cols)
+        for idx, result in enumerate(cards):
+            with cols[idx % num_cols]:
+                prompt_name = result.get('Prompt Name', f'Field {idx+1}')
+                extracted_value = result.get('Extracted Value', '')
+                source = result.get('Source', '')
+                is_success = result.get('Is Success', False)
+                is_error = result.get('Is Error', False)
+                is_not_found = result.get('Is Not Found', False)
+                latency = result.get('Latency (s)', 0.0)
 
-            # Use the same style as Extraction Results
-            st.markdown(f"""
-            <div class='result-item'>
-                <div class='result-label'>🔍 {prompt_name}</div>
-                <div class='result-value' title='{extracted_value}'>{extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}</div>
-                <div style='font-size:0.9em; color:#666; margin-top:0.5em;'>
-                    <b>Source:</b> {source} &nbsp;|
-                    <b>Status:</b> {('✅' if is_success else '')}{('❌' if is_error else '')}{('⚠️' if is_not_found else '')} &nbsp;|
-                    <span>Latency: {latency:.2f}s</span>
+                st.markdown(f"""
+                <div class='result-item'>
+                    <div class='result-label'>🔍 {prompt_name}</div>
+                    <div class='result-value' title='{extracted_value}'>{extracted_value[:100] + ('...' if len(extracted_value) > 100 else '')}</div>
+                    <div style='font-size:0.9em; color:#666; margin-top:0.5em;'>
+                        <b>Source:</b> {source} &nbsp;|
+                        <b>Status:</b> {('✅' if is_success else '')}{('❌' if is_error else '')}{('⚠️' if is_not_found else '')} &nbsp;|
+                        <span>Latency: {latency:.2f}s</span>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
         # --- END CARD UI REPLACEMENT ---
         # --- Mini Debug Widget ---
         from debug_interface import create_mini_debug_widget
