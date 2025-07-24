@@ -550,7 +550,6 @@ if embedding_function is None or llm is None:
 # --- UI Layout ---
 # Blue band header with LEONI
 
-
 # Blue band header with LEONI
 st.markdown("""
     <div class="header-band">
@@ -559,8 +558,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown("### 📄 PDF Attribute Extraction")
-st.markdown("Upload your PDF documents and automatically extract key attributes.")
+# Only show the PDF Attribute Extraction section if processing has NOT started or finished
+if not st.session_state.get('extraction_performed', False) and not st.session_state.get('processed_files', []):
+    st.markdown("### 📄 PDF Attribute Extraction")
+    st.markdown("Upload your PDF documents and automatically extract key attributes.")
 
 if not config.GROQ_API_KEY:
     st.warning("Groq API Key not found. Please set the GROQ_API_KEY environment variable.", icon="⚠️")
