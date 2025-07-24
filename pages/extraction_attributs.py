@@ -1896,9 +1896,6 @@ else:
 
             csv_data = convert_df_to_csv(export_df)
 
-            # Convert summary dict to JSON
-            json_summary_data = json.dumps(export_summary, indent=2).encode('utf-8')
-
             export_cols = st.columns(2)
             with export_cols[0]:
                 st.download_button(
@@ -1907,14 +1904,6 @@ else:
                     file_name='detailed_extraction_results.csv',
                     mime='text/csv',
                     key='download_csv'
-                )
-            with export_cols[1]:
-                 st.download_button(
-                    label="📥 Download Summary Metrics (JSON)",
-                    data=json_summary_data,
-                    file_name='evaluation_summary.json',
-                    mime='application/json',
-                    key='download_json'
                 )
         else:
             st.info("Process documents and calculate metrics to enable export.")
