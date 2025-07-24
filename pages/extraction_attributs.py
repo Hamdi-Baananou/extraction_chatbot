@@ -1584,60 +1584,11 @@ else:
             }, context={"step": "stage3_skipped_all_successful"})
         
         # --- Stage Summary ---
-        st.divider()
-        st.subheader("📊 Extraction Stage Summary")
-        
-        # Count results by source
-        stage_summary = {}
-        for result in extraction_results_list:
-            if isinstance(result, dict):
-                source = result.get('Source', 'Unknown')
-                is_success = result.get('Is Success', False)
-                is_error = result.get('Is Error', False)
-                is_not_found = result.get('Is Not Found', False)
-                
-                if source not in stage_summary:
-                    stage_summary[source] = {'total': 0, 'success': 0, 'error': 0, 'not_found': 0}
-                
-                stage_summary[source]['total'] += 1
-                if is_success:
-                    stage_summary[source]['success'] += 1
-                elif is_error:
-                    stage_summary[source]['error'] += 1
-                elif is_not_found:
-                    stage_summary[source]['not_found'] += 1
-        
-        # Display stage summary
-        summary_cols = st.columns(len(stage_summary))
-        for i, (source, stats) in enumerate(stage_summary.items()):
-            with summary_cols[i]:
-                success_rate = (stats['success'] / stats['total'] * 100) if stats['total'] > 0 else 0
-                color = "#28a745" if success_rate > 70 else "#ffc107" if success_rate > 30 else "#dc3545"
-                
-                st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, {color} 0%, {color}80 100%); 
-                                color: white; 
-                                padding: 1rem; 
-                                border-radius: 10px; 
-                                text-align: center; 
-                                margin-bottom: 1rem;">
-                        <h4 style="margin: 0;">{source}</h4>
-                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">
-                            Success: {stats['success']}/{stats['total']} ({success_rate:.1f}%)<br>
-                            Errors: {stats['error']} | Not Found: {stats['not_found']}
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+        # The Extraction Stage Summary section has been removed as requested.
         
         debug_logger.info("Extraction process completed", data={
             "total_results": len(extraction_results_list),
-            "stage_summary": stage_summary,
-            "results_summary": {
-                "success_count": sum(1 for r in extraction_results_list if r.get('Is Success', False)),
-                "error_count": sum(1 for r in extraction_results_list if r.get('Is Error', False)),
-                "not_found_count": sum(1 for r in extraction_results_list if r.get('Is Not Found', False)),
-                "rate_limit_count": sum(1 for r in extraction_results_list if r.get('Is Rate Limit', False))
-            }
+            # 'stage_summary' and 'results_summary' removed
         }, context={"step": "extraction_complete"})
         
         # Set extraction_performed flag and handle success/error messages
