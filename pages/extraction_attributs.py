@@ -8,7 +8,6 @@ logger.debug("TEST DEBUG LOG: If you see this, DEBUG logging is working.")
 
 # --- Force python to use pysqlite3 based on chromadb docs ---
 __import__('pysqlite3')
-import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 # --- End override ---
 
@@ -16,10 +15,8 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from debug_logger import debug_logger, DebugTimer, log_streamlit_state, log_json_parsing
 debug_logger.info("Extraction page loaded", context={"page": "extraction_attributs"})
 
-import streamlit as st
 import os
 import time
-from loguru import logger
 import json
 import pandas as pd
 import asyncio
@@ -28,8 +25,6 @@ import nest_asyncio
 from typing import List
 import re
 from groq import Groq
-import requests
-from sentence_transformers import SentenceTransformer
 import config
 
 nest_asyncio.apply()
