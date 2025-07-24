@@ -1677,7 +1677,7 @@ else:
         }, context={"step": "display_results"})
         
         st.divider()
-        st.header("3. Enter Ground Truth & Evaluate")
+        st.header("Extraction Results")
 
         results_df = pd.DataFrame(st.session_state.evaluation_results)
         
@@ -1692,7 +1692,7 @@ else:
              results_df['Source'] = 'Unknown' # Add placeholder if missing
              debug_logger.warning("Source column missing, added placeholder", context={"step": "source_column_fixed"})
 
-        st.info("Enter the correct 'Ground Truth' value for each field below. Leave blank if the field shouldn't exist or 'NOT FOUND' is correct.")
+
 
         # --- CARD UI REPLACEMENT FOR GROUND TRUTH ---
         num_cols = 5
@@ -1931,7 +1931,7 @@ else:
 
         # --- Export Section --- 
         st.divider()
-        st.header("6. Export Results")
+        st.header("Export Results")
 
         if st.session_state.evaluation_results:
             # Prepare data for export
