@@ -4,7 +4,7 @@ from loguru import logger
 import sys
 logger.remove()
 logger.add(sys.stderr, level="DEBUG")
-logger.debug("TEST DEBUG LOG: If you see this, DEBUG logging is working.")
+# logger.debug("TEST DEBUG LOG: If you see this, DEBUG logging is working.")  # Debug log commented out
 
 # --- Force python to use pysqlite3 based on chromadb docs ---
 __import__('pysqlite3')
@@ -13,7 +13,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 # --- DEBUG LOGGER INTEGRATION ---
 from debug_logger import debug_logger, DebugTimer, log_streamlit_state, log_json_parsing
-debug_logger.info("Extraction page loaded", context={"page": "extraction_attributs"})
+# debug_logger.info("Extraction page loaded", context={"page": "extraction_attributs"})  # Debug log commented out
 
 import os
 import time
