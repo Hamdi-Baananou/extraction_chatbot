@@ -1728,8 +1728,7 @@ else:
                 """, unsafe_allow_html=True)
         # --- END CARD UI REPLACEMENT ---
         # --- Mini Debug Widget ---
-        from debug_interface import create_mini_debug_widget
-        create_mini_debug_widget()
+        
         
         # --- Manual Recheck Section ---
         st.divider()
