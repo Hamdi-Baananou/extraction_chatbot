@@ -873,44 +873,7 @@ else:
         st.info(f"Running Stage 1 (Web Data Extraction) for {len(prompts_to_run)} attributes...")
         update_thinking_log("Stage 1 Start", f"Running Stage 1 (Web Data Extraction) for {len(prompts_to_run)} attributes...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
         
-        # Progress indicator for three-stage process
-        progress_col1, progress_col2, progress_col3 = st.columns(3)
-        with progress_col1:
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
-                            color: white; 
-                            padding: 0.5rem; 
-                            border-radius: 10px; 
-                            text-align: center; 
-                            margin-bottom: 1rem;">
-                    <strong>Stage 1: Web</strong><br>
-                    <small>Web scraping & extraction</small>
-                </div>
-            """, unsafe_allow_html=True)
-        with progress_col2:
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
-                            color: white; 
-                            padding: 0.5rem; 
-                            border-radius: 10px; 
-                            text-align: center; 
-                            margin-bottom: 1rem;">
-                    <strong>Stage 2: NuMind</strong><br>
-                    <small>Structured extraction</small>
-                </div>
-            """, unsafe_allow_html=True)
-        with progress_col3:
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); 
-                            color: white; 
-                            padding: 0.5rem; 
-                            border-radius: 10px; 
-                            text-align: center; 
-                            margin-bottom: 1rem;">
-                    <strong>Stage 3: Fallback</strong><br>
-                    <small>Final recheck</small>
-                </div>
-            """, unsafe_allow_html=True)
+
         
         cols = st.columns(2) # For displaying progress
         col_index = 0
