@@ -711,7 +711,7 @@ with st.sidebar:
     if st.session_state.pdf_chain and st.session_state.web_chain and st.session_state.processed_files:
         st.success(f"Ready. Processed: {', '.join(st.session_state.processed_files)}")
     else:
-        st.info("Upload and process PDF documents to view extracted data.")
+
         update_thinking_log("Upload Instructions", "Upload and process PDF documents to view extracted data.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
 
 
@@ -870,7 +870,7 @@ else:
         # -------------------------------------------------
 
         # --- Block 1b: Three-Stage Extraction Logic --- 
-        st.info(f"Running Stage 1 (Web Data Extraction) for {len(prompts_to_run)} attributes...")
+
         update_thinking_log("Stage 1 Start", f"Running Stage 1 (Web Data Extraction) for {len(prompts_to_run)} attributes...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
         
 
@@ -1108,7 +1108,7 @@ else:
                 }
 
         # --- Stage 2: NuMind Fallback --- 
-        st.info(f"Running Stage 2 (NuMind Fallback) for {len(pdf_fallback_needed)} attributes...")
+
         update_thinking_log("Stage 2 Start", f"Running Stage 2 (NuMind Fallback) for {len(pdf_fallback_needed)} attributes...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
         debug_logger.info("Starting Stage 2 (NuMind Fallback)", data={
             "fallback_count": len(pdf_fallback_needed),
@@ -1378,7 +1378,7 @@ else:
                     else:
                         other_fallbacks.append(result.get('Prompt Name'))
             
-            st.info(f"Running Stage 3 (Final Fallback) for {len(final_fallback_needed)} attributes that need rechecking...")
+
             update_thinking_log("Stage 3 Start", f"Running Stage 3 (Final Fallback) for {len(final_fallback_needed)} attributes that need rechecking...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             if none_responses:
                 st.warning(f"⚠️ Including {len(none_responses)} attributes that returned 'none' responses - these will be rechecked for potential missed values.")
@@ -1746,7 +1746,7 @@ else:
             part_number = st.session_state.get("part_number_input", "").strip()
             
             if selected_for_recheck and st.button("🔄 Run Manual Recheck", type="primary"):
-                st.info(f"Running manual recheck for {len(selected_for_recheck)} selected attributes...")
+
                 update_thinking_log("Manual Recheck Start", f"Running manual recheck for {len(selected_for_recheck)} selected attributes...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                 
                 # Run manual recheck
@@ -1871,7 +1871,7 @@ else:
                                     if should_rollback and bool(parse_error):
                                         st.warning(f"⚠️ Rolled back to original '{original_value}' for '{attribute_key}' (manual recheck error)")
                                     elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
-                                        st.info(f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)")
+
                                         update_thinking_log(f"Manual Recheck Preserved {attribute_key}", f"✅ Preserved original '{original_value}' for '{attribute_key}' (confirmed by manual recheck)", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                                     break
                             
@@ -1914,7 +1914,6 @@ else:
                     key='download_csv'
                 )
         else:
-            st.info("Process documents and calculate metrics to enable export.")
             update_thinking_log("Export Instructions", "Process documents and calculate metrics to enable export.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
 
     # --- Block 3: Handle cases where extraction ran but yielded nothing, or hasn't run ---
