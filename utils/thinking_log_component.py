@@ -19,11 +19,14 @@ def thinking_log_component(current_step_text: str, time_elapsed: str, log_conten
             background-color: #ffffff;
             border-radius: 12px;
             padding: 1rem;
-            margin-top: 1.5rem;
+            margin-top: 0.2rem;
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             color: #333333;
             border: 1px solid #e0e0e0;
             max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
         }
         .thinking-card-header {
             display: flex;
