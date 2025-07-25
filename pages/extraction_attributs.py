@@ -598,10 +598,6 @@ log_placeholder = st.empty()  # Create the placeholder exactly where you want th
 st.session_state['log_placeholder'] = log_placeholder  # Store in session state for access in callbacks
 render_thinking_log(log_placeholder)
 
-# Only show the PDF Attribute Extraction section if processing has NOT started or finished
-if not st.session_state.get('extraction_performed', False) and not st.session_state.get('processed_files', []):
-    st.markdown("### 📄 PDF Attribute Extraction")
-    st.markdown("Upload your PDF documents and automatically extract key attributes.")
 
 if not config.GROQ_API_KEY:
     st.warning("Groq API Key not found. Please set the GROQ_API_KEY environment variable.", icon="⚠️")
