@@ -1,7 +1,6 @@
 import streamlit as st
 from utils.thinking_log_component import thinking_log_component
 st.set_page_config(layout="wide")
-log_placeholder = st.empty()  # <-- Moved here so it's available everywhere
 
 from loguru import logger
 import sys
@@ -595,6 +594,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
+log_placeholder = st.empty()  # Create the placeholder exactly where you want the thinking log
+st.session_state['log_placeholder'] = log_placeholder  # Store in session state for access in callbacks
+render_thinking_log(log_placeholder)
 
 # Only show the PDF Attribute Extraction section if processing has NOT started or finished
 if not st.session_state.get('extraction_performed', False) and not st.session_state.get('processed_files', []):
@@ -637,7 +639,7 @@ with st.sidebar:
             st.session_state.uploaded_file_data = [(f.name, f.getvalue()) for f in uploaded_files]
             logger.info(f"Starting processing for {len(filenames)} files: {', '.join(filenames)}")
             # --- PDF Processing ---
-            update_thinking_log("Processing PDFs (Loading, Cleaning, Splitting)", f"Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=log_placeholder)
+            update_thinking_log("Processing PDFs (Loading, Cleaning, Splitting)", f"Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=st.session_state['log_placeholder'])
 
             with st.spinner("Processing PDFs... Loading, cleaning, splitting..."):
                 processed_docs = [] # Initialize as empty list instead of None
@@ -712,15 +714,6 @@ with st.sidebar:
 
 
 # --- Main Layout with Two Columns ---
-
-render_thinking_log(log_placeholder)
-# Initialize chatbot
-
-# Create two columns: left for extraction, right for results and chat
-left_col, _ = st.columns([2, 1])
-
-with left_col:
-    pass
 
 # --- Get current asyncio event loop --- 
 # Needed for both scraping and running the async extraction chain
