@@ -563,6 +563,7 @@ llm = None
 
 try:
     logger.info("Attempting to initialize embedding function...")
+    update_thinking_log("Initializing Embeddings", "Attempting to initialize embedding function...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
     embedding_function = initialize_embeddings()
     if embedding_function:
          logger.success("Embedding function initialized successfully.")
@@ -573,6 +574,7 @@ except Exception as e:
 
 try:
     logger.info("Attempting to initialize LLM...")
+    update_thinking_log("Initializing LLM", "Attempting to initialize LLM...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
     llm = initialize_llm_cached()
     if llm:
         logger.success("LLM initialized successfully.")
@@ -638,8 +640,9 @@ with st.sidebar:
             # Store uploaded file data for NuMind extraction
             st.session_state.uploaded_file_data = [(f.name, f.getvalue()) for f in uploaded_files]
             logger.info(f"Starting processing for {len(filenames)} files: {', '.join(filenames)}")
+            update_thinking_log("Starting Processing", f"Starting processing for {len(filenames)} files: {', '.join(filenames)}", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             # --- PDF Processing ---
-            update_thinking_log("Processing PDFs (Loading, Cleaning, Splitting)", f"Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=st.session_state['log_placeholder'])
+            update_thinking_log("Processing PDFs", "Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=st.session_state['log_placeholder'])
 
             with st.spinner("Processing PDFs... Loading, cleaning, splitting..."):
                 processed_docs = [] # Initialize as empty list instead of None
@@ -659,6 +662,7 @@ with st.sidebar:
                     
                     processing_time = time.time() - start_time
                     logger.info(f"PDF processing took {processing_time:.2f} seconds.")
+                    update_thinking_log("PDF Processing", f"PDF processing took {processing_time:.2f} seconds.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                 except Exception as e:
                     logger.error(f"Failed during PDF processing phase: {e}", exc_info=True)
                     st.error(f"Error processing PDFs: {e}")
@@ -667,12 +671,14 @@ with st.sidebar:
             # --- Vector Store Indexing ---
             if processed_docs and len(processed_docs) > 0:
                 logger.info(f"Generated {len(processed_docs)} documents.")
+                update_thinking_log("Documents Generated", f"Generated {len(processed_docs)} documents.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                 with st.spinner("Indexing documents in vector store..."):
                     try:
                         start_time = time.time()
                         st.session_state.retriever = setup_vector_store(processed_docs, embedding_function)
                         indexing_time = time.time() - start_time
                         logger.info(f"Vector store setup took {indexing_time:.2f} seconds.")
+                        update_thinking_log("Vector Store Setup", f"Vector store setup took {indexing_time:.2f} seconds.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
 
                         if st.session_state.retriever:
                             st.session_state.processed_files = filenames # Update list
@@ -749,6 +755,7 @@ else:
         
         st.session_state.extraction_attempts += 1
         logger.info(f"Starting extraction process... (attempt {st.session_state.extraction_attempts})")
+        update_thinking_log("Extraction Start", f"Starting extraction process... (attempt {st.session_state.extraction_attempts})", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
         
         # --- Get Part Number --- 
         part_number = st.session_state.get("part_number_input", "").strip()
@@ -771,6 +778,7 @@ else:
             # Check cache first
             if st.session_state.current_part_number_scraped == part_number and st.session_state.scraped_table_html_cache is not None:
                  logger.info(f"Using cached scraped HTML for part number {part_number}.")
+                 update_thinking_log("Web Scrape Cache", f"Using cached scraped HTML for part number {part_number}.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                  scraped_table_html = st.session_state.scraped_table_html_cache
                  debug_logger.info("Using cached web data", data={
                      "part_number": part_number,
@@ -779,6 +787,7 @@ else:
             else:
                  # Scrape and update cache
                  logger.info(f"Part number {part_number} changed or not cached. Attempting web scrape...")
+                 update_thinking_log("Web Scrape", f"Part number {part_number} changed or not cached. Attempting web scrape...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                  debug_logger.info("Cache miss, starting web scrape", data={
                      "part_number": part_number,
                      "cached_part": st.session_state.current_part_number_scraped
@@ -846,7 +855,7 @@ else:
                           debug_logger.session_state("scraped_table_html_cache", None, context={"step": "web_scraping_cache_clear"})
         else:
              logger.info("No part number provided, skipping web scrape.")
-             debug_logger.info("Skipping web scrape", data={"reason": "No part number provided"}, context={"step": "web_scraping_skipped"})
+             update_thinking_log("Web Scrape Skipped", "No part number provided, skipping web scrape.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
              # Clear cache if part number is removed
              if st.session_state.current_part_number_scraped is not None:
                   st.session_state.scraped_table_html_cache = None
@@ -972,6 +981,7 @@ else:
                             )
                             
                             logger.info(f"Stage 1 (Web) for '{attribute_key}' took {run_time:.2f} seconds.")
+                            update_thinking_log(f"Stage 1 Web {attribute_key}", f"Stage 1 (Web) for '{attribute_key}' took {run_time:.2f} seconds.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                             time.sleep(SLEEP_INTERVAL_SECONDS) # Add delay
                         except Exception as e:
                              logger.error(f"Error during Stage 1 (Web) call for '{attribute_key}': {e}", exc_info=True)
@@ -1028,6 +1038,7 @@ else:
                             final_answer_value = "NOT FOUND"
                             needs_fallback = True # Mark for PDF stage
                             logger.info(f"Stage 1 result for '{attribute_key}' is NOT FOUND. Queued for PDF fallback.")
+                            update_thinking_log(f"Stage 1 Not Found {attribute_key}", f"Stage 1 result for '{attribute_key}' is NOT FOUND. Queued for PDF fallback.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                             debug_logger.info(f"NOT FOUND for {attribute_key}", data={
                                 "parsed_value": parsed_value,
                                 "needs_fallback": True
@@ -1115,10 +1126,7 @@ else:
         
         else: # No scraped HTML, all attributes need PDF fallback
             logger.info("No scraped web data available. All attributes will use PDF extraction.")
-            debug_logger.info("No web data, all attributes need PDF fallback", data={
-                "total_attributes": len(prompts_to_run),
-                "fallback_list": list(prompts_to_run.keys())
-            }, context={"step": "stage1_skipped_no_web_data"})
+            update_thinking_log("No Web Data", "No scraped web data available. All attributes will use PDF extraction.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             
             pdf_fallback_needed = list(prompts_to_run.keys())
             # Populate intermediate results with placeholders indicating skipped web stage
@@ -1333,6 +1341,7 @@ else:
                                     }, context={"step": "stage2_numind_result_stored", "attribute": attribute_key})
                                     
                                     logger.info(f"Updated result for '{prompt_name}' with NuMind data.")
+                                    update_thinking_log(f"NuMind Updated {prompt_name}", f"Updated result for '{prompt_name}' with NuMind data.", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                             else:
                                 st.error("NuMind extraction failed. No results returned.")
                                 debug_logger.error("NuMind extraction failed", context={"step": "stage2_numind_failed"})
@@ -1605,8 +1614,10 @@ else:
                         # Show feedback for rollback
                         if should_rollback and bool(parse_error):
                             logger.info(f"Stage 3: Rolled back to original '{original_value}' for '{attribute_key}' (Stage 3 error: {parse_error})")
+                            update_thinking_log(f"Stage 3 Rollback {attribute_key}", f"Stage 3: Rolled back to original '{original_value}' for '{attribute_key}' (Stage 3 error: {parse_error})", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                         elif should_rollback and original_value.lower() in ["none", "null", "n/a", "na"]:
                             logger.info(f"Stage 3: Preserved original '{original_value}' for '{attribute_key}' (confirmed by recheck)")
+                            update_thinking_log(f"Stage 3 Preserved {attribute_key}", f"Stage 3: Preserved original '{original_value}' for '{attribute_key}' (confirmed by recheck)", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
                         break
         else:
             st.success("No attributes need final fallback - all extractions completed successfully.")
@@ -1630,6 +1641,7 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter on success
             logger.info("Extraction completed successfully, setting extraction_performed=True")
+            update_thinking_log("Extraction Success", "Extraction completed successfully, setting extraction_performed=True", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             st.success("Extraction complete (3-stage process: Web → NuMind → Final Fallback). Enter ground truth below.")
             
             debug_logger.session_state("evaluation_results", extraction_results_list, context={"step": "results_stored"})
@@ -1644,6 +1656,7 @@ else:
             st.session_state.extraction_performed = True
             st.session_state.extraction_attempts = 0  # Reset counter even on error
             logger.info("Extraction completed with issues, setting extraction_performed=True")
+            update_thinking_log("Extraction Issues", "Extraction completed with issues, setting extraction_performed=True", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             
             debug_logger.warning("Extraction completed with issues", data={
                 "results_count": len(extraction_results_list)
