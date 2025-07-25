@@ -726,7 +726,7 @@ except RuntimeError:  # 'RuntimeError: There is no current event loop...'
 
 # Check if BOTH chains are ready before proceeding
 if not st.session_state.pdf_chain or not st.session_state.web_chain:
-    st.info("Upload and process documents using the sidebar to see extracted results here.")
+
     # Ensure evaluation state is also clear if no chain
     if not st.session_state.evaluation_results and not st.session_state.extraction_performed:
          reset_evaluation_state() # Ensure reset if no chain and extraction not done
