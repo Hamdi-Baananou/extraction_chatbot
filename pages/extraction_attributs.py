@@ -22,9 +22,7 @@ import pandas as pd
 import asyncio
 import subprocess
 import nest_asyncio
-from typing import List
 import re
-from groq import Groq
 import config
 
 nest_asyncio.apply()
@@ -671,7 +669,7 @@ with st.sidebar:
 
 
 # Create two columns: left for extraction, right for results and chat
-left_col, right_col = st.columns([2, 1])
+left_col, _ = st.columns([2, 1])
 
 with left_col:
     pass
@@ -1904,9 +1902,6 @@ else:
     # This logic might need review depending on how Stage 1/2 errors are handled
     elif (st.session_state.pdf_chain or st.session_state.web_chain) and st.session_state.extraction_performed:
         st.warning("Extraction process completed, but no valid results were generated for some fields. Check logs or raw outputs if available.")
-
-with right_col:
-    pass
 
     
     
