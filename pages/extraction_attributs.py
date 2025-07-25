@@ -636,7 +636,7 @@ with st.sidebar:
             logger.info(f"Starting processing for {len(filenames)} files: {', '.join(filenames)}")
             update_thinking_log("Starting Processing", f"Starting processing for {len(filenames)} files: {', '.join(filenames)}", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
             # --- PDF Processing ---
-            update_thinking_log("Processing PDFs", "Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=st.session_state['log_placeholder'])
+            update_thinking_log("Processing PDFs", f"Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=st.session_state['log_placeholder'])
 
             with st.spinner("Processing PDFs... Loading, cleaning, splitting..."):
                 processed_docs = [] # Initialize as empty list instead of None
