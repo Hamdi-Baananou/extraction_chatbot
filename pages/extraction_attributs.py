@@ -563,7 +563,6 @@ llm = None
 
 try:
     logger.info("Attempting to initialize embedding function...")
-    update_thinking_log("Initializing Embeddings", "Attempting to initialize embedding function...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
     embedding_function = initialize_embeddings()
     if embedding_function:
          logger.success("Embedding function initialized successfully.")
@@ -574,7 +573,6 @@ except Exception as e:
 
 try:
     logger.info("Attempting to initialize LLM...")
-    update_thinking_log("Initializing LLM", "Attempting to initialize LLM...", is_active=True, reset_time=False, placeholder=st.session_state['log_placeholder'])
     llm = initialize_llm_cached()
     if llm:
         logger.success("LLM initialized successfully.")
