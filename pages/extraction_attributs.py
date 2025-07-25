@@ -594,7 +594,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
-render_thinking_log(log_placeholder)
+
 
 # Only show the PDF Attribute Extraction section if processing has NOT started or finished
 if not st.session_state.get('extraction_performed', False) and not st.session_state.get('processed_files', []):
@@ -712,9 +712,10 @@ with st.sidebar:
 
 
 # --- Main Layout with Two Columns ---
-# Initialize chatbot
 
 render_thinking_log(log_placeholder)
+# Initialize chatbot
+
 # Create two columns: left for extraction, right for results and chat
 left_col, _ = st.columns([2, 1])
 
