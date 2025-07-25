@@ -1,5 +1,8 @@
 import streamlit as st
+from utils.thinking_log_component import thinking_log_component
 st.set_page_config(layout="wide")
+log_placeholder = st.empty()  # <-- Moved here so it's available everywhere
+
 from loguru import logger
 import sys
 logger.remove()
@@ -311,6 +314,51 @@ def extract_json_from_string(s):
             return None
     return None
 
+# --- Helper for Thinking Log State ---
+def get_thinking_log_args():
+    """Gets the arguments for the thinking log component from session state."""
+    state = st.session_state.get('thinking_log', None)
+    if not state:
+        # Initialize if it doesn't exist
+        state = {
+            'step': 'Ready',
+            'log': 'Upload documents and process to begin.',
+            'is_active': False,
+            'start_time': time.time(),
+        }
+        st.session_state.thinking_log = state
+    elapsed = int(time.time() - state['start_time'])
+    if elapsed < 60:
+        elapsed_str = f"{elapsed}s"
+    else:
+        elapsed_str = f"{elapsed//60}m {elapsed%60}s"
+    return (state['step'], elapsed_str, state['log'], state['is_active'])
+
+def render_thinking_log(placeholder):
+    """Renders the current thinking log state into a placeholder."""
+    with placeholder.container():
+        step, elapsed, log, is_active = get_thinking_log_args()
+        thinking_log_component(
+            current_step_text=step,
+            time_elapsed=elapsed,
+            log_content=log,
+            is_active=is_active
+        )
+
+def update_thinking_log(step, log, is_active=True, reset_time=False, placeholder=None):
+    """Updates the thinking log state and optionally re-renders it in a placeholder."""
+    if 'thinking_log' not in st.session_state:
+        st.session_state.thinking_log = {
+            'step': '', 'log': '', 'is_active': False, 'start_time': time.time(),
+        }
+    if reset_time or st.session_state.thinking_log['step'] != step:
+        st.session_state.thinking_log['start_time'] = time.time()
+    st.session_state.thinking_log['step'] = step
+    st.session_state.thinking_log['log'] = log
+    st.session_state.thinking_log['is_active'] = is_active
+    if placeholder:
+        render_thinking_log(placeholder)
+
 # --- Playwright Browser Installation ---
 def install_playwright_browsers():
     """Install Playwright browsers if needed."""
@@ -592,6 +640,8 @@ with st.sidebar:
             st.session_state.uploaded_file_data = [(f.name, f.getvalue()) for f in uploaded_files]
             logger.info(f"Starting processing for {len(filenames)} files: {', '.join(filenames)}")
             # --- PDF Processing ---
+            update_thinking_log("Processing PDFs (Loading, Cleaning, Splitting)", f"Processing files: {', '.join(filenames)}", is_active=True, reset_time=True, placeholder=log_placeholder)
+
             with st.spinner("Processing PDFs... Loading, cleaning, splitting..."):
                 processed_docs = [] # Initialize as empty list instead of None
                 try:
