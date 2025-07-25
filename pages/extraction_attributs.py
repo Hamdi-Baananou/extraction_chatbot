@@ -588,20 +588,17 @@ if embedding_function is None or llm is None:
     st.error("Core components (Embeddings or LLM) failed to initialize. Cannot continue.")
     st.stop()
 
-# --- UI Layout ---
-# Blue band header with LEONI
-
-# Blue band header with LEONI
-st.markdown("""
-    <div class="header-band">
-        <h1>LEOPARTS</h1>
-        <h2>LEONI</h2>
-    </div>
-""", unsafe_allow_html=True)
-
-# Add a little space, then show the thinking log directly below the header
-st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
-render_thinking_log(log_placeholder)
+# --- Main Layout with Two Columns ---
+# Place header and thinking log at the top of the main content
+with st.container():
+    st.markdown("""
+        <div class="header-band">
+            <h1>LEOPARTS</h1>
+            <h2>LEONI</h2>
+        </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+    render_thinking_log(log_placeholder)
 
 # Only show the PDF Attribute Extraction section if processing has NOT started or finished
 if not st.session_state.get('extraction_performed', False) and not st.session_state.get('processed_files', []):
