@@ -443,10 +443,15 @@ Output:
 """
     prompt = PromptTemplate.from_template(template)
 
-    # Chain uses retriever to get PDF context based on extraction instructions
+    # Chain uses SimpleRetriever to get PDF context based on extraction instructions
     pdf_chain = (
         RunnableParallel(
-            context=lambda x: format_docs(retrieve_and_log_chunks(retriever, x['extraction_instructions'], x['attribute_key'])),
+            context=lambda x: format_docs(retriever.retrieve(
+                query=x['extraction_instructions'],
+                attribute_key=x['attribute_key'],
+                part_number=x.get('part_number'),
+                max_queries=3
+            )),
             extraction_instructions=lambda x: x['extraction_instructions'],
             attribute_key=lambda x: x['attribute_key'],
             part_number=lambda x: x.get('part_number', "Not Provided"),

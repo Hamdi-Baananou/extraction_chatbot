@@ -1143,11 +1143,12 @@ else:
                         with st.spinner(f"Stage 2: Extracting {attribute_key} from PDF Data..."):
                             try:
                                 start_time = time.time()
-                                context_chunks = fetch_chunks(
-                                    st.session_state.retriever,
-                                    part_number,
-                                    attribute_key,
-                                    k=8
+                                # Use the new SimpleRetriever instead of fetch_chunks
+                                context_chunks = st.session_state.retriever.retrieve(
+                                    query=attribute_key,
+                                    attribute_key=attribute_key,
+                                    part_number=part_number,
+                                    max_queries=3
                                 )
                                 context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                                 
