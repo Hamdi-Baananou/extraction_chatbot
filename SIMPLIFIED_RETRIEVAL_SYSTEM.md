@@ -47,7 +47,7 @@ _log_retrieved_chunks(attribute_key, query, chunks)
 # ONE method that replaces ALL the above:
 chunks = retriever.retrieve(
     query="material name",           # What to search for
-    attribute_key="Material Name",   # Optional: for enhanced search
+    attribute_key="Material Name",   # Optional: for enhanced search + tag filtering
     part_number="ABC123",           # Optional: for filtering
     max_queries=3                   # Optional: control performance (default 3)
 )
@@ -73,6 +73,7 @@ class SimpleRetriever:
     This ONE method handles all retrieval cases:
     - Simple semantic search
     - Attribute-specific search with enhanced queries
+    - **Tag-aware retrieval** (filters chunks with specific attribute tags)
     - Part number filtering
     - Threshold filtering
     - Early stopping for performance
@@ -117,6 +118,15 @@ class SimpleRetriever:
         # 3. Apply part number filtering if needed
         if part_number:
             all_chunks = self._filter_by_part_number(all_chunks, part_number)
+        
+        # 4. Apply attribute tag filtering if needed (tag-aware retrieval)
+        if attribute_key:
+            original_count = len(all_chunks)
+            all_chunks = self._filter_by_attribute_tag(all_chunks, attribute_key)
+            
+            # If no chunks found with attribute tags, fall back to semantic similarity only
+            if not all_chunks and original_count > 0:
+                all_chunks = self._get_chunks_with_threshold(query)[:5]
         
         return all_chunks[:5]
 ```
@@ -191,12 +201,12 @@ chunks = retriever.retrieve(
 )
 ```
 
-### **Enhanced Search**
+### **Enhanced Search with Tag Filtering**
 ```python
-# Enhanced search with attribute-specific terms
+# Enhanced search with attribute-specific terms AND tag-aware retrieval
 chunks = retriever.retrieve(
     query="material name",
-    attribute_key="Material Name",
+    attribute_key="Material Name",  # This enables tag filtering
     max_queries=5
 )
 ```
@@ -210,6 +220,17 @@ chunks = retriever.retrieve(
     part_number="ABC123",
     max_queries=3
 )
+```
+
+### **Tag-Aware Retrieval (Preserved from fetch_chunks)**
+```python
+# Tag-aware retrieval: only chunks with specific attribute tags
+chunks = retriever.retrieve(
+    query="Contact Systems",
+    attribute_key="Contact Systems",  # Filters chunks that have this tag
+    part_number="ABC123"
+)
+# This replaces the old fetch_chunks() functionality
 ```
 
 ---

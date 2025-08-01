@@ -323,7 +323,19 @@ class SimpleRetriever:
             all_chunks = self._filter_by_part_number(all_chunks, part_number)
             logger.info(f"🔍 Part number filtering: {len(all_chunks)} chunks after filtering")
         
-        # 4. Limit total chunks to avoid overwhelming the LLM
+        # 4. Apply attribute tag filtering if needed (tag-aware retrieval)
+        if attribute_key:
+            original_count = len(all_chunks)
+            all_chunks = self._filter_by_attribute_tag(all_chunks, attribute_key)
+            logger.info(f"🏷️ Tag filtering: {len(all_chunks)} chunks after filtering (was {original_count})")
+            
+            # If no chunks found with attribute tags, fall back to semantic similarity only
+            if not all_chunks and original_count > 0:
+                logger.warning(f"No chunks found with '{attribute_key}' tag. Falling back to semantic similarity retrieval.")
+                all_chunks = self._get_chunks_with_threshold(query)[:5]  # Take top 5 semantically similar chunks
+                logger.info(f"Fallback: Using {len(all_chunks)} semantically similar chunks for '{attribute_key}'")
+        
+        # 5. Limit total chunks to avoid overwhelming the LLM
         max_chunks = 5
         if len(all_chunks) > max_chunks:
             logger.info(f"📊 Limiting chunks from {len(all_chunks)} to {max_chunks}")
@@ -385,6 +397,24 @@ class SimpleRetriever:
                 logger.debug(f"Chunk accepted: part_number={chunk_part_number}")
             else:
                 logger.debug(f"Chunk rejected: part_number_match={part_number_match}")
+        
+        return filtered
+    
+    def _filter_by_attribute_tag(self, chunks: List[Document], attribute_key: str) -> List[Document]:
+        """Filter chunks by attribute tag (tag-aware retrieval)."""
+        filtered = []
+        for chunk in chunks:
+            chunk_attr_value = chunk.metadata.get(attribute_key)
+            
+            # Check attribute tag exists and is not empty
+            attr_tag_exists = chunk_attr_value is not None and chunk_attr_value != ""
+            logger.debug(f"Attribute tag check: {attribute_key}='{chunk_attr_value}' -> {attr_tag_exists}")
+            
+            if attr_tag_exists:
+                filtered.append(chunk)
+                logger.debug(f"Chunk accepted: {attribute_key}={chunk_attr_value}")
+            else:
+                logger.debug(f"Chunk rejected: attr_tag_exists={attr_tag_exists}")
         
         return filtered
 
