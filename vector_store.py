@@ -221,6 +221,55 @@ class HuggingFaceAPIEmbeddings(Embeddings):
             # Return zero vector as fallback
             return [0.0] * 768  # Assuming 768-dimensional embeddings
 
+# --- Embedding Function Setup ---
+@logger.catch(reraise=True) # Automatically log exceptions
+def get_embedding_function():
+    """
+    Creates and returns the embedding function based on configuration.
+    Returns:
+        HuggingFaceAPIEmbeddings instance if successful, None otherwise.
+    """
+    try:
+        # Use the custom HuggingFace API embeddings
+        embedding_function = HuggingFaceAPIEmbeddings(
+            api_url=config.EMBEDDING_API_URL
+        )
+        
+        # Test the embedding function with a simple query
+        test_embedding = embedding_function.embed_query("test")
+        if test_embedding and len(test_embedding) > 0:
+            logger.success(f"Embedding function initialized successfully with {len(test_embedding)} dimensions")
+            return embedding_function
+        else:
+            logger.error("Embedding function test failed - returned empty embedding")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize embedding function: {e}", exc_info=True)
+        return None
+
+# --- Chroma Client Setup ---
+@logger.catch(reraise=True)
+def get_chroma_client():
+    """
+    Creates and returns a Chroma client instance.
+    Returns:
+        ChromaClient instance if successful, None otherwise.
+    """
+    try:
+        persist_directory = config.CHROMA_PERSIST_DIRECTORY
+        if not persist_directory:
+            logger.warning("Persistence directory not configured. Cannot create Chroma client.")
+            return None
+            
+        client = ChromaClient(path=persist_directory)
+        logger.success("Chroma client initialized successfully")
+        return client
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize Chroma client: {e}", exc_info=True)
+        return None
+
 # --- Unified Simple Retriever (NEW) ---
 class SimpleRetriever:
     """
