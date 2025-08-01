@@ -41,24 +41,29 @@ ATTRIBUTE_DICT = load_attribute_dictionary()
 def initialize_llm():
     """
     Initialize the LLM client with proper error handling and fallback.
-    Returns the initialized LLM client or None if initialization fails.
+    Returns the initialized LangChain Groq LLM or None if initialization fails.
     """
     try:
-        from groq import Groq
+
         
         if not config.GROQ_API_KEY:
             logger.error("GROQ_API_KEY not found in environment variables.")
             return None
             
-        client = Groq(api_key=config.GROQ_API_KEY)
-        logger.info("Groq LLM client initialized successfully.")
-        return client
+        llm = ChatGroq(
+            api_key=config.GROQ_API_KEY,
+            model_name=config.LLM_MODEL_NAME,
+            temperature=config.LLM_TEMPERATURE,
+            max_tokens=config.LLM_MAX_OUTPUT_TOKENS
+        )
+        logger.info("LangChain Groq LLM initialized successfully.")
+        return llm
         
     except ImportError:
-        logger.error("Groq library not installed. Install with: pip install groq")
+        logger.error("LangChain Groq library not installed. Install with: pip install langchain-groq")
         return None
     except Exception as e:
-        logger.error(f"Failed to initialize Groq client: {e}")
+        logger.error(f"Failed to initialize LangChain Groq LLM: {e}")
         return None
 
 # --- Document Formatting ---
