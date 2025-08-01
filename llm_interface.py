@@ -17,11 +17,10 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 from bs4 import BeautifulSoup # Import BeautifulSoup
 
-import hashlib
-import datetime
+
 import os
 
-RETRIEVED_CHUNKS_LOG = os.path.join(os.path.dirname(__file__), 'retrieved_chunks_log.jsonl')
+
 
 # Load attribute dictionary
 def load_attribute_dictionary():
@@ -34,188 +33,40 @@ def load_attribute_dictionary():
         logger.error(f"Failed to load attribute dictionary: {e}")
         return {}
 
-# Global attribute dictionary
+# Load the attribute dictionary
 ATTRIBUTE_DICT = load_attribute_dictionary()
 
-def _hash_chunk(chunk):
-    # Hash chunk content and metadata for reproducibility
-    m = hashlib.sha256()
-    m.update(chunk.page_content.encode('utf-8'))
-    m.update(json.dumps(chunk.metadata, sort_keys=True).encode('utf-8'))
-    return m.hexdigest()
-
-def _log_retrieved_chunks(attribute_key, query, chunks):
-    # Store a record of retrieved chunks for this attribute and query
-    record = {
-        'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
-        'attribute_key': attribute_key,
-        'query': query,
-        'chunk_hashes': [_hash_chunk(chunk) for chunk in chunks],
-        'chunk_metadata': [chunk.metadata for chunk in chunks],
-        'num_chunks': len(chunks)
-    }
-    with open(RETRIEVED_CHUNKS_LOG, 'a', encoding='utf-8') as f:
-        f.write(json.dumps(record) + '\n')
-
-# --- Initialize LLM ---
+# --- LLM Initialization ---
 @logger.catch(reraise=True) # Keep catch for unexpected errors during init
 def initialize_llm():
-    """Initializes and returns the Groq LLM client. No internal logging."""
-    if not config.GROQ_API_KEY:
-        # logger.error("GROQ_API_KEY not found.") # Remove internal logging
-        raise ValueError("GROQ_API_KEY is not set in the environment variables.")
-
+    """
+    Initialize the LLM client with proper error handling and fallback.
+    Returns the initialized LLM client or None if initialization fails.
+    """
     try:
-        llm = ChatGroq(
-            temperature=0.0,
-            top_p=1.0,                 # leave at 1 for greedy decoding
-            groq_api_key=config.GROQ_API_KEY,
-            model_name=config.LLM_MODEL_NAME,
-            max_tokens=config.LLM_MAX_OUTPUT_TOKENS,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            seed=42                    # optional but guarantees replayability
-            # model_kwargs={}          # <- only needed for truly custom params
-        )
-        # logger.info(f"Groq LLM initialized with model: {config.LLM_MODEL_NAME}") # Remove internal logging
-        return llm
+        from groq import Groq
+        
+        if not config.GROQ_API_KEY:
+            logger.error("GROQ_API_KEY not found in environment variables.")
+            return None
+            
+        client = Groq(api_key=config.GROQ_API_KEY)
+        logger.info("Groq LLM client initialized successfully.")
+        return client
+        
+    except ImportError:
+        logger.error("Groq library not installed. Install with: pip install groq")
+        return None
     except Exception as e:
-        # logger.error(f"Failed to initialize Groq LLM: {e}") # Remove internal logging
-        # Re-raise a more specific error if needed, or let @logger.catch handle it
-        raise ConnectionError(f"Could not initialize Groq LLM: {e}")
+        logger.error(f"Failed to initialize Groq client: {e}")
+        return None
 
-# --- Option 1: Using LangChain's Groq Integration (Recommended) ---
-
+# --- Document Formatting ---
 def format_docs(docs: List[Document]) -> str:
-    """Formats retrieved documents into a string for the prompt."""
-    # Keep detailed formatting as it might help LLM locate info in PDFs
-    context_parts = []
-    for i, doc in enumerate(docs):
-        source = doc.metadata.get('source', 'Unknown')
-        page = doc.metadata.get('page', 'N/A')
-        context_parts.append(
-            f"Document {i+1} from '{source}' (Page {page}):\n{doc.page_content}"
-        )
-    return "\n\n---\n\n".join(context_parts)
+    """Format a list of documents into a single string."""
+    return "\n\n".join([doc.page_content for doc in docs])
 
-def create_enhanced_search_queries(attribute_key: str, base_query: str) -> list:
-    """Create enhanced search queries using dictionary values and synonyms."""
-    queries = [base_query]  # Always include the original query
-    
-    # Get dictionary values for this attribute
-    dict_values = ATTRIBUTE_DICT.get(attribute_key, [])
-    
-    # Create attribute-specific search terms
-    attribute_terms = {
-        "Material Filling": ["filling", "additive", "filler", "glass fiber", "GF", "GB", "MF", "talcum"],
-        "Material Name": ["material", "polymer", "PA", "PBT", "PP", "PET", "PC", "silicone", "rubber"],
-        "Pull-To-Seat": ["pull to seat", "pull-back", "tug-lock", "terminal insertion", "seating"],
-        "Gender": ["gender", "male", "female", "plug", "receptacle", "socket", "header"],
-        "Height [MM]": ["height", "Y-axis", "total height", "thickness"],
-        "Length [MM]": ["length", "Z-axis", "depth", "insertion depth"],
-        "Width [MM]": ["width", "X-axis", "diameter"],
-        "Number Of Cavities": ["cavity", "position", "way", "pin count", "terminal count"],
-        "Number Of Rows": ["row", "grid", "arrangement", "layout"],
-        "Mechanical Coding": ["coding", "keying", "polarization", "mechanical key"],
-        "Colour": ["color", "colour", "black", "white", "red", "blue", "yellow"],
-        "Colour Coding": ["color coding", "colour coding", "coded components"],
-        "Working Temperature": ["temperature", "thermal", "operating temp", "min temp", "max temp"],
-        "Housing Seal": ["seal", "sealing", "radial seal", "interface seal", "ring seal"],
-        "Wire Seal": ["wire seal", "individual seal", "mat seal", "gel seal"],
-        "Sealing": ["sealing", "waterproof", "dustproof", "IP rating"],
-        "Sealing Class": ["IP", "ingress protection", "IPx0", "IPx4", "IPx6", "IPx7"],
-        "Contact Systems": ["contact system", "terminal system", "MQS", "MCP", "TAB", "MLK"],
-        "Terminal Position Assurance": ["TPA", "terminal position assurance", "anti-backout"],
-        "Connector Position Assurance": ["CPA", "connector position assurance", "secondary lock"],
-        "Name Of Closed Cavities": ["closed cavity", "blocked position", "plugged cavity"],
-        "Pre-assembled": ["pre-assembled", "assembly", "disassembly", "delivered as"],
-        "Type Of Connector": ["connector type", "standard", "antenna", "relay holder", "bulb holder"],
-        "Set/Kit": ["set", "kit", "accessories", "components"],
-        "HV Qualified": ["HV", "high voltage", "voltage", "qualified", "certified"]
-    }
-    
-    # Add attribute-specific terms
-    if attribute_key in attribute_terms:
-        queries.extend(attribute_terms[attribute_key])
-    
-    # Add dictionary values as search terms (for better matching)
-    for value in dict_values[:10]:  # Limit to first 10 values to avoid too many queries
-        if isinstance(value, str) and len(value) > 1:
-            queries.append(value)
-    
-    # Create combined queries using base query + dictionary values
-    if dict_values:
-        for value in dict_values[:5]:  # Use top 5 dictionary values
-            if isinstance(value, str) and len(value) > 1:
-                combined_query = f"{base_query} {value}"
-                queries.append(combined_query)
-    
-    # Remove duplicates and limit total queries
-    unique_queries = list(dict.fromkeys(queries))[:20]  # Increased to 20 queries
-    
-    return unique_queries
-
-def retrieve_and_log_chunks(retriever, query: str, attribute_key: str):
-    """Retrieves chunks from the retriever using enhanced search queries and logs them for debugging."""
-    logger.info(f"🔍 RETRIEVING CHUNKS for attribute '{attribute_key}' with base query: '{query}'")
-    
-    # Create enhanced search queries
-    enhanced_queries = create_enhanced_search_queries(attribute_key, query)
-    logger.info(f"📋 Using {len(enhanced_queries)} enhanced search queries: {enhanced_queries[:5]}...")
-    
-    all_chunks = []
-    seen_chunks = set()  # Track unique chunks by content hash
-    
-    try:
-        # Try each enhanced query
-        for i, search_query in enumerate(enhanced_queries):
-            logger.debug(f"🔍 Search {i+1}/{len(enhanced_queries)}: '{search_query}'")
-            
-            try:
-                chunks = retriever.invoke(search_query)
-                
-                if chunks:
-                    # Add unique chunks only
-                    for chunk in chunks:
-                        chunk_hash = _hash_chunk(chunk)
-                        if chunk_hash not in seen_chunks:
-                            seen_chunks.add(chunk_hash)
-                            all_chunks.append(chunk)
-                            logger.debug(f"  ✅ Added unique chunk from query '{search_query}'")
-                
-            except Exception as e:
-                logger.warning(f"❌ Query '{search_query}' failed: {e}")
-                continue
-        
-        # Limit total chunks to avoid overwhelming the LLM
-        max_chunks = 10
-        if len(all_chunks) > max_chunks:
-            logger.info(f"📊 Limiting chunks from {len(all_chunks)} to {max_chunks}")
-            all_chunks = all_chunks[:max_chunks]
-        
-        if not all_chunks:
-            logger.warning(f"❌ No chunks retrieved for attribute '{attribute_key}' after trying {len(enhanced_queries)} queries")
-            _log_retrieved_chunks(attribute_key, query, [])
-            return []
-        
-        logger.info(f"✅ Retrieved {len(all_chunks)} unique chunks for attribute '{attribute_key}' from {len(enhanced_queries)} queries:")
-        
-        for i, chunk in enumerate(all_chunks):
-            source = chunk.metadata.get('source', 'Unknown')
-            page = chunk.metadata.get('page', 'N/A')
-            start_index = chunk.metadata.get('start_index', 'N/A')
-            
-            logger.info(f"  📄 Chunk {i+1}: Source='{source}', Page={page}, StartIndex={start_index}")
-            logger.info(f"     Content: {chunk.page_content[:200]}{'...' if len(chunk.page_content) > 200 else ''}")
-        
-        _log_retrieved_chunks(attribute_key, query, all_chunks)
-        
-        return all_chunks
-        
-    except Exception as e:
-        logger.error(f"❌ Error in enhanced retrieval for attribute '{attribute_key}': {e}")
-        _log_retrieved_chunks(attribute_key, query, [])
-        return []
+# --- Website Scraping Functions ---
 
 # Configure websites to scrape, in order of preference.
 # We now target the main table/container holding the product features.
