@@ -286,93 +286,37 @@ class SimpleRetriever:
     def __init__(self, vectorstore, config):
         self.vectorstore = vectorstore
         self.config = config
-        self.attribute_dict = self._load_attribute_dictionary()
     
-    def _load_attribute_dictionary(self):
-        """Load the attribute dictionary from JSON file."""
-        try:
-            import json
-            import os
-            dict_path = os.path.join(os.path.dirname(__file__), 'attribute_dictionary.json')
-            with open(dict_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load attribute dictionary: {e}")
-            return {}
+
     
-    def _hash_chunk(self, chunk):
-        """Hash chunk content and metadata for deduplication."""
-        import hashlib
-        import json
-        m = hashlib.sha256()
-        m.update(chunk.page_content.encode('utf-8'))
-        m.update(json.dumps(chunk.metadata, sort_keys=True).encode('utf-8'))
-        return m.hexdigest()
+
     
     def retrieve(self, query: str, attribute_key: str = None, 
                 part_number: str = None, max_queries: int = 3) -> List[Document]:
         """
-        ONE method that replaces ALL your current retrieval methods.
+        Simplified retrieval: similarity search + tagging only.
         
         Args:
             query: The search query
-            attribute_key: Optional attribute for enhanced search
+            attribute_key: Optional attribute for tag filtering
             part_number: Optional part number for filtering
-            max_queries: Maximum queries to try (default 3 instead of 20)
+            max_queries: Ignored (kept for compatibility)
         
         Returns:
             List of relevant documents (max 5)
-        
-        Examples:
-            # Simple retrieval (like ThresholdRetriever.invoke)
-            chunks = retriever.retrieve("material name")
-            
-            # PDF retrieval with part number (like fetch_chunks)
-            chunks = retriever.retrieve("material name", part_number="ABC123")
-            
-            # Enhanced retrieval (like retrieve_and_log_chunks)
-            chunks = retriever.retrieve("material name", attribute_key="Material Name", max_queries=5)
         """
-        logger.info(f"🔍 SIMPLE RETRIEVAL: query='{query}', attribute='{attribute_key}', part_number='{part_number}'")
+        logger.info(f"🔍 SIMPLIFIED RETRIEVAL: query='{query}', attribute='{attribute_key}', part_number='{part_number}'")
         
-        # 1. Create optimized queries (max 3 instead of 20)
-        queries = self._create_queries(query, attribute_key, max_queries)
-        logger.info(f"📋 Using {len(queries)} queries: {queries}")
+        # 1. Simple similarity search with threshold filtering
+        all_chunks = self._get_chunks_with_threshold(query)
+        logger.info(f"📋 Retrieved {len(all_chunks)} chunks with similarity search")
         
-        # 2. Retrieve with threshold filtering
-        all_chunks = []
-        seen_chunks = set()
-        
-        for i, search_query in enumerate(queries):
-            logger.debug(f"🔍 Search {i+1}/{len(queries)}: '{search_query}'")
-            
-            try:
-                chunks = self._get_chunks_with_threshold(search_query)
-                
-                if chunks:
-                    # Add unique chunks only
-                    for chunk in chunks:
-                        chunk_hash = self._hash_chunk(chunk)
-                        if chunk_hash not in seen_chunks:
-                            seen_chunks.add(chunk_hash)
-                            all_chunks.append(chunk)
-                            logger.debug(f"  ✅ Added unique chunk from query '{search_query}'")
-                
-                # Early stopping if we have enough chunks
-                if len(all_chunks) >= 5:
-                    logger.info(f"📊 Early stopping: Found {len(all_chunks)} chunks after {i+1} queries")
-                    break
-                    
-            except Exception as e:
-                logger.warning(f"❌ Query '{search_query}' failed: {e}")
-                continue
-        
-        # 3. Apply part number filtering if needed
+        # 2. Apply part number filtering if needed
         if part_number:
             all_chunks = self._filter_by_part_number(all_chunks, part_number)
             logger.info(f"🔍 Part number filtering: {len(all_chunks)} chunks after filtering")
         
-        # 4. Apply attribute tag filtering if needed (tag-aware retrieval)
+        # 3. Apply attribute tag filtering if needed (tag-aware retrieval)
         if attribute_key:
             original_count = len(all_chunks)
             all_chunks = self._filter_by_attribute_tag(all_chunks, attribute_key)
@@ -384,7 +328,7 @@ class SimpleRetriever:
                 all_chunks = self._get_chunks_with_threshold(query)[:5]  # Take top 5 semantically similar chunks
                 logger.info(f"Fallback: Using {len(all_chunks)} semantically similar chunks for '{attribute_key}'")
         
-        # 5. Limit total chunks to avoid overwhelming the LLM
+        # 4. Limit total chunks to avoid overwhelming the LLM
         max_chunks = 5
         if len(all_chunks) > max_chunks:
             logger.info(f"📊 Limiting chunks from {len(all_chunks)} to {max_chunks}")
@@ -393,20 +337,7 @@ class SimpleRetriever:
         logger.info(f"✅ Retrieved {len(all_chunks)} chunks for query '{query}'")
         return all_chunks
     
-    def _create_queries(self, query: str, attribute_key: str, max_queries: int) -> List[str]:
-        """Create optimized queries (max 3 instead of 20)."""
-        queries = [query]  # Base query
-        
-        if attribute_key and attribute_key in self.attribute_dict:
-            # Add only 1-2 most relevant dictionary values
-            dict_values = self.attribute_dict[attribute_key]
-            for value in dict_values[:2]:  # Only top 2 values
-                if isinstance(value, str) and len(value) > 1:
-                    queries.append(value)
-        
-        # Remove duplicates and limit to max_queries
-        unique_queries = list(dict.fromkeys(queries))[:max_queries]
-        return unique_queries
+
     
     def _get_chunks_with_threshold(self, query: str) -> List[Document]:
         """Get chunks with similarity threshold filtering."""
