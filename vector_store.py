@@ -168,7 +168,7 @@ class HuggingFaceAPIEmbeddings(Embeddings):
             except Exception as e:
                 logger.error(f"Failed to embed document {i+1}: {e}")
                 # Return zero vector as fallback
-                all_embeddings.append([0.0] * 768)  # Assuming 768-dimensional embeddings
+                all_embeddings.append([0.0] * 1024)  # Assuming 768-dimensional embeddings
         
         return all_embeddings
 
@@ -219,7 +219,7 @@ class HuggingFaceAPIEmbeddings(Embeddings):
         except Exception as e:
             logger.error(f"Failed to embed query: {e}")
             # Return zero vector as fallback
-            return [0.0] * 768  # Assuming 768-dimensional embeddings
+            return [0.0] * 1024  # Assuming 768-dimensional embeddings
 
 # --- Embedding Function Setup ---
 @logger.catch(reraise=True) # Automatically log exceptions
