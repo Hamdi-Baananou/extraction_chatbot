@@ -1242,7 +1242,7 @@ else:
                             
                             debug_logger.info("NuMind extraction completed", data={
                                 "duration": run_time,
-                                "result_keys": list(numind_result.keys()) if numind_result else []
+                                "result_keys": list(numind_result.keys()) if numind_result and isinstance(numind_result, dict) else []
                             }, context={"step": "stage2_numind_complete"})
                             
                             if numind_result:

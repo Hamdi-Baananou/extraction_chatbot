@@ -432,8 +432,26 @@ async def extract_with_numind_using_template(client, file_bytes: bytes) -> Optio
         
         if output_schema:
             logger.success("NuMind template-based extraction completed")
-            logger.debug(f"NuMind result structure: {list(output_schema.keys()) if isinstance(output_schema, dict) else type(output_schema)}")
-            return output_schema
+            logger.debug(f"NuMind response type: {type(output_schema)}")
+            
+            # Handle ExtractionResponse object - convert to dictionary
+            if hasattr(output_schema, 'model_dump'):
+                result = output_schema.model_dump()
+                logger.debug(f"NuMind result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
+                return result
+            elif isinstance(output_schema, dict):
+                logger.debug(f"NuMind result structure: {list(output_schema.keys())}")
+                return output_schema
+            else:
+                logger.warning(f"Unexpected NuMind result type: {type(output_schema)}")
+                # Try to get more info about the object
+                try:
+                    logger.debug(f"NuMind response attributes: {dir(output_schema)}")
+                    if hasattr(output_schema, '__dict__'):
+                        logger.debug(f"NuMind response __dict__: {output_schema.__dict__}")
+                except Exception as e:
+                    logger.debug(f"Could not inspect NuMind response: {e}")
+                return None
         else:
             logger.warning("NuMind template-based extraction returned invalid result")
             return None
@@ -454,7 +472,11 @@ def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any],
     Returns:
         The extracted value as string, or None if not found
     """
-    if not numind_result or not isinstance(numind_result, dict):
+    if not numind_result:
+        logger.warning(f"Invalid NuMind result for attribute '{attribute_key}': None or empty")
+        return None
+        
+    if not isinstance(numind_result, dict):
         logger.warning(f"Invalid NuMind result for attribute '{attribute_key}': {type(numind_result)}")
         return None
         
@@ -472,7 +494,7 @@ def extract_specific_attribute_from_numind_result(numind_result: Dict[str, Any],
                 if nested_value is not None:
                     return str(nested_value).strip()
         
-        logger.debug(f"Attribute '{attribute_key}' not found in NuMind template result: {list(numind_result.keys())}")
+        logger.debug(f"Attribute '{attribute_key}' not found in NuMind template result: {list(numind_result.keys()) if isinstance(numind_result, dict) else type(numind_result)}")
         return None
         
     except Exception as e:
