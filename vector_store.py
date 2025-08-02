@@ -10,7 +10,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
 from langchain.vectorstores.base import VectorStoreRetriever
-from chromadb import Client as ChromaClient
 from langchain.embeddings.base import Embeddings
 
 import config # Import configuration
@@ -248,28 +247,6 @@ def get_embedding_function():
         logger.error(f"Failed to initialize embedding function: {e}", exc_info=True)
         return None
 
-# --- Chroma Client Setup ---
-@logger.catch(reraise=True)
-def get_chroma_client():
-    """
-    Creates and returns a Chroma client instance.
-    Returns:
-        ChromaClient instance if successful, None otherwise.
-    """
-    try:
-        persist_directory = config.CHROMA_PERSIST_DIRECTORY
-        if not persist_directory:
-            logger.warning("Persistence directory not configured. Cannot create Chroma client.")
-            return None
-            
-        client = ChromaClient(path=persist_directory)
-        logger.success("Chroma client initialized successfully")
-        return client
-        
-    except Exception as e:
-        logger.error(f"Failed to initialize Chroma client: {e}", exc_info=True)
-        return None
-
 # --- Unified Simple Retriever (NEW) ---
 class SimpleRetriever:
     """
@@ -473,50 +450,5 @@ def setup_vector_store(
 
     except Exception as e:
         logger.error(f"Failed to setup vector store: {e}", exc_info=True)
-        return None
-
-@logger.catch(reraise=True)
-def load_existing_vector_store(embedding_function) -> Optional[SimpleRetriever]:
-    """
-    Loads an existing Chroma vector store from the persistent directory.
-    Args:
-        embedding_function: The embedding function to use.
-    Returns:
-        A SimpleRetriever object if the store exists and loads, otherwise None.
-    """
-    persist_directory = config.CHROMA_PERSIST_DIRECTORY
-    collection_name = config.COLLECTION_NAME
-
-    if not persist_directory:
-        logger.warning("Persistence directory not configured. Cannot load existing store.")
-        return None
-    if not embedding_function:
-        logger.error("Embedding function is not available for load_existing_vector_store.")
-        return None
-
-    if not os.path.exists(persist_directory):
-         logger.warning(f"Persistence directory '{persist_directory}' does not exist. Cannot load.")
-         return None
-
-    logger.info(f"Attempting to load existing vector store from: '{persist_directory}', Collection: '{collection_name}'")
-
-    try:
-        vector_store = Chroma(
-            persist_directory=persist_directory,
-            embedding_function=embedding_function,
-            collection_name=collection_name,
-        )
-
-        logger.success(f"Successfully loaded vector store '{collection_name}'.")
-        return SimpleRetriever(
-            vectorstore=vector_store,
-            config=config
-        )
-
-    except Exception as e:
-        logger.warning("Failed to load existing vector store '{}' from '{}': {}".format(collection_name, persist_directory, e), exc_info=False)
-        if "does not exist" in str(e).lower():
-             logger.warning("Persistent collection '{}' not found in directory '{}'. Cannot load.".format(collection_name, persist_directory))
-
         return None
 
