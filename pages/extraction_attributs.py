@@ -394,10 +394,10 @@ from llm_interface import (
     _invoke_chain_and_process,
     scrape_website_table_html,
     create_numind_extraction_chain,
-    extract_with_numind_using_schema,
+    extract_with_numind_using_template,
     extract_specific_attribute_from_numind_result
 )
-from numind_schema_config import get_custom_schema
+from numind_schema_config import get_custom_template
 # Import the prompts
 from extraction_prompts import (
     # Material Properties
@@ -1233,12 +1233,9 @@ else:
                                 "attributes_count": len(pdf_fallback_needed)
                             }, context={"step": "stage2_numind_start"})
                             
-                            # Get the custom extraction schema that matches your NuMind playground
-                            extraction_schema = get_custom_schema()
-                            
-                            # Run NuMind extraction with your custom schema
+                            # Run NuMind template-based extraction
                             numind_result = loop.run_until_complete(
-                                extract_with_numind_using_schema(st.session_state.numind_chain, file_data, extraction_schema)
+                                extract_with_numind_using_template(st.session_state.numind_chain, file_data)
                             )
                             
                             run_time = time.time() - start_time
