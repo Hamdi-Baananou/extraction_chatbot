@@ -8,7 +8,7 @@ from langchain.docstore.document import Document
 # Recommended: Use LangChain's Groq integration
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel
+from langchain_core.runnables import RunnableParallel
 from langchain_core.output_parsers import StrOutputParser
 
 import config # Import configuration
@@ -305,8 +305,7 @@ Output:
             context=lambda x: format_docs(retriever.retrieve(
                 query=x['extraction_instructions'],
                 attribute_key=x['attribute_key'],
-                part_number=x.get('part_number'),
-                max_queries=3
+                part_number=x.get('part_number')
             )),
             extraction_instructions=lambda x: x['extraction_instructions'],
             attribute_key=lambda x: x['attribute_key'],

@@ -259,7 +259,7 @@ class SimpleRetriever:
 
     
     def retrieve(self, query: str, attribute_key: str = None, 
-                part_number: str = None, max_queries: int = 3) -> List[Document]:
+                part_number: str = None) -> List[Document]:
         """
         Simplified retrieval: similarity search + tagging only.
         
@@ -267,7 +267,6 @@ class SimpleRetriever:
             query: The search query
             attribute_key: Optional attribute for tag filtering
             part_number: Optional part number for filtering
-            max_queries: Ignored (kept for compatibility)
         
         Returns:
             List of relevant documents (max 5)

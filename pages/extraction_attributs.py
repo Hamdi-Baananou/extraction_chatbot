@@ -1147,8 +1147,7 @@ else:
                                 context_chunks = st.session_state.retriever.retrieve(
                                     query=attribute_key,
                                     attribute_key=attribute_key,
-                                    part_number=part_number,
-                                    max_queries=3
+                                    part_number=part_number
                                 )
                                 context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                                 
@@ -1415,8 +1414,7 @@ else:
                             context_chunks = st.session_state.retriever.retrieve(
                                 query=attribute_key,
                                 attribute_key=attribute_key,
-                                part_number=part_number,
-                                max_queries=5  # More thorough search for final fallback
+                                part_number=part_number
                             )
                             context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                             
@@ -1764,8 +1762,7 @@ else:
                             context_chunks = st.session_state.retriever.retrieve(
                                 query=attribute_key,
                                 attribute_key=attribute_key,
-                                part_number=part_number,
-                                max_queries=6  # More thorough search for manual recheck
+                                part_number=part_number
                             )
                             context_text = "\n\n".join([chunk.page_content for chunk in context_chunks]) if context_chunks else ""
                             
