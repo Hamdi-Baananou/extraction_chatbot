@@ -1,22 +1,12 @@
 # vector_store.py
 from typing import List, Optional
 from loguru import logger
-import os
 import time
 import requests
-import json
-
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
-from langchain.vectorstores.base import VectorStoreRetriever
 from langchain.embeddings.base import Embeddings
-
 import config # Import configuration
-import random
-import numpy as np
-random.seed(42)
-np.random.seed(42)
 
 # --- Custom Hugging Face API Embeddings ---
 class HuggingFaceAPIEmbeddings(Embeddings):
