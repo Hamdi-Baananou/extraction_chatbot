@@ -21,9 +21,6 @@ VISION_MODEL_NAME = os.getenv("VISION_MODEL_NAME", "mistral-small-latest")
 
 # --- Embedding Configuration ---
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
-EMBEDDING_DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu") # Add this line ('cpu' is default, 'cuda' if GPU available and configured)
-NORMALIZE_EMBEDDINGS = True # Add this line (Often recommended for sentence transformers)
-# EMBEDDING_CACHE_DIR = os.getenv("EMBEDDING_CACHE_DIR", "./embedding_cache") # Optional: Specify cache dir
 
 # --- API Embedding Configuration ---
 USE_API_EMBEDDINGS = os.getenv("USE_API_EMBEDDINGS", "true").lower() == "true"
