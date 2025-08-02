@@ -1360,7 +1360,8 @@ else:
                 
                 # Check for attributes that need final fallback
                 if (is_not_found or 
-                    extracted_value in ["NOT FOUND", "Error", "Processing Error", "Unexpected JSON Format", "Unexpected JSON Type"] or
+                    extracted_value in ["NOT FOUND", "Error", "Processing Error", "Unexpected JSON Format", "Unexpected JSON Type", "NuMind Extraction Failed"] or
+                    extracted_value.startswith("NuMind Error:") or
                     not extracted_value or 
                     extracted_value.strip() == "" or
                     extracted_value == "(Web Stage Skipped)" or
