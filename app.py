@@ -5,15 +5,7 @@ import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import os
-import time
-from loguru import logger
-import json # Import the json library
-import pandas as pd # Add pandas import
-import re # Import the 're' module for regular expressions
-import asyncio # Add asyncio import
-import subprocess # To run playwright install
 import nest_asyncio # Add nest_asyncio for better async handling
-from streamlit.runtime.scriptrunner import add_script_run_ctx
 import streamlit as st
 
 # Apply nest_asyncio to allow nested event loops
