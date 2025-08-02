@@ -31,7 +31,7 @@ EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL", "https://hbaananou-embedder-m
 EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", 1024))  # Default to 1024 for BAAI/bge-m3
 EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", 5))  # Reduced default for large files
 EMBEDDING_TIMEOUT = int(os.getenv("EMBEDDING_TIMEOUT", 120))  # Increased timeout for large files
-EMBEDDING_MAX_TEXT_LENGTH = int(os.getenv("EMBEDDING_MAX_TEXT_LENGTH", 4000))  # Max characters per text
+EMBEDDING_MAX_TEXT_LENGTH = int(os.getenv("EMBEDDING_MAX_TEXT_LENGTH", 30000))  # Max characters per text
 
 # --- Vector Store Configuration ---
 # Define the persistence directory (can be None for in-memory)
