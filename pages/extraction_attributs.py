@@ -394,12 +394,10 @@ from llm_interface import (
     _invoke_chain_and_process,
     scrape_website_table_html,
     create_numind_extraction_chain,
-    extract_with_numind_from_bytes,
     extract_with_numind_using_schema,
-    get_default_extraction_schema,
     extract_specific_attribute_from_numind_result
 )
-from numind_schema_config import get_custom_schema, get_custom_instructions
+from numind_schema_config import get_custom_schema
 # Import the prompts
 from extraction_prompts import (
     # Material Properties

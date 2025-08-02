@@ -133,44 +133,6 @@ CUSTOM_EXTRACTION_SCHEMA = {
     "required": []
 }
 
-# You can also add custom extraction instructions here
-CUSTOM_EXTRACTION_INSTRUCTIONS = """
-Extract the following attributes from the provided PDF document:
-
-1. Material Filling: Look for information about fillers, additives, or reinforcements in the material
-2. Material Name: Identify the main polymer or material type (e.g., PA66, PBT, etc.)
-3. Pull-to-Seat: Find information about pull-to-seat force or mechanism
-4. Gender: Determine if the connector is male or female
-5. Height [MM]: Extract the height dimension in millimeters
-6. Length [MM]: Extract the length dimension in millimeters
-7. Width [MM]: Extract the width dimension in millimeters
-8. Number of Cavities: Count the number of cavities or positions
-9. Number of Rows: Count the number of rows in the connector
-10. Mechanical Coding: Look for mechanical coding or keying information
-11. Colour: Identify the color of the connector
-12. Colour Coding: Find any color coding information
-13. Max. Working Temperature [°C]: Extract maximum working temperature
-14. Min. Working Temperature [°C]: Extract minimum working temperature
-15. Housing Seal: Look for housing seal information
-16. Wire Seal: Find wire seal details
-17. Sealing: Extract general sealing information
-18. Sealing Class: Find IP rating or sealing class
-19. Contact Systems: Identify the contact system type
-20. Terminal Position Assurance: Look for TPA information
-21. Connector Position Assurance: Find CPA information
-22. Closed Cavities: Check for closed or blocked cavities
-23. Pre-assembled: Determine if the connector is pre-assembled
-24. Type of Connector: Identify the connector type
-25. Set/Kit: Check if it's a set or kit
-26. HV Qualified: Look for high voltage qualification
-
-If an attribute is not found in the document, return "NOT FOUND" for that field.
-"""
-
 def get_custom_schema():
     """Returns the custom extraction schema."""
-    return CUSTOM_EXTRACTION_SCHEMA
-
-def get_custom_instructions():
-    """Returns the custom extraction instructions."""
-    return CUSTOM_EXTRACTION_INSTRUCTIONS 
+    return CUSTOM_EXTRACTION_SCHEMA 
