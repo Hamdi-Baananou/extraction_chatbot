@@ -916,8 +916,8 @@ else:
                             debug_logger.llm_request(
                                 f"Extract {attribute_key} from web data",
                                 "web_chain",
-                                0.7,
-                                1000,
+                                0.0,
+                                8192,
                                 context={"step": "stage1_llm_request", "attribute": attribute_key}
                             )
                             
@@ -1437,8 +1437,8 @@ else:
                             debug_logger.llm_request(
                                 f"Final fallback extraction for {attribute_key}",
                                 "pdf_chain",
-                                0.7,
-                                1500,  # Increased token limit for more thorough analysis
+                                0.0,
+                                8192,  # Increased token limit for more thorough analysis
                                 context={"step": "stage3_llm_request", "attribute": attribute_key}
                             )
                             
@@ -1876,6 +1876,7 @@ else:
                             logger.error(f"Manual recheck failed for '{attribute_key}': {e}", exc_info=True)
                 
                 st.success("Manual recheck completed!")
+                update_thinking_log("Manual Recheck Complete", f"Manual recheck completed for {len(selected_for_recheck)} attributes. Results updated.", is_active=False, reset_time=False, placeholder=st.session_state['log_placeholder'])
                 st.rerun()  # Refresh to show updated results
         else:
             st.success("All attributes have been successfully extracted! No manual recheck needed.")
